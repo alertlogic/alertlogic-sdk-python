@@ -1,0 +1,279 @@
+openapi: 3.0.2
+info:
+  title: assets_query
+  version: '1.0'
+servers:
+  - url: 'https://api.global-services.global.alertlogic.com'
+    description: production
+    x-alertlogic-session-endpoint: true
+  - url: 'https://api.global-integration.product.dev.alertlogic.com'
+    description: integration
+    x-alertlogic-session-endpoint: true
+paths:
+  '/remediations/v1/{account_id}/health/{asset_type}':
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+      - schema:
+          type: string
+        name: asset_type
+        in: path
+        required: true
+    get:
+      summary: Your GET endpoint
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assets:
+                    type: object
+                  filters:
+                    type: object
+                  list:
+                    type: array
+                    items:
+                      type: object
+      operationId: get_collection_health
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: filter
+        - schema:
+            type: boolean
+          in: query
+          name: scope
+      description: >-
+        This endpoint will return collection health information for the given
+        asset type (agent, appliance, network, or vpc). By default, the endpoint
+        summarizes the health of assets of the given asset type across all
+        deployments, but supports filtration by deployment ID, deployment type,
+        and protection level (protection_policy_id), as well as evaluating assets
+        in scope (default) or not.
+
+
+
+        Note that the protection level filter, protection_policy_id, requires
+        a policy ID from the policies service. If given, only assets in the
+        protection scope of that policy will be used to generate the collection
+        health information.
+  '/remediations/v1/{account_id}/health/summary':
+    get:
+      summary: Your GET endpoint
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agents:
+                    type: object
+                    description: Top-level object containing agent health summary
+                  appliances:
+                    type: object
+                    description: Top-level object containing appliance health summary
+                  networks:
+                    type: object
+                    description: Top-level object containing network health summary
+      operationId: get_collection_health_summary
+      description: >-
+        This endpoint will return a summary of collection health by asset type
+        (agent, appliance, network). The summary is a count of total/protected
+        (as applicable) assets of the given type, as well as a breakdown of the
+        counts of each by health_level. By default, the endpoint summarizes the
+        health of all deployments, but supports filtration by deployment ID,
+        deployment type, and protection level (protection_policy_id), as well as
+        evaluating assets in scope (default) or not.
+
+
+
+        Note that the protection level filter, protection_policy_id, requires
+        a policy ID from the policies service. If given, only assets in the
+        protection scope of that policy will be used to generate the summary.
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: "The AIMS account ID whose assets are being accessed. Only valid account IDs are acceptable. Invalid account IDs result in an HTTP 404 Not Found or HTTP 403 Forbidden, depending on the client's access level."
+  '/assets_query/v2/{account_id}/exposures/{asset_type}/summary':
+    get:
+      summary: Your GET endpoint
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: {}
+      operationId: get_exposures_summary
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+      - schema:
+          type: string
+        name: asset_type
+        in: path
+        required: true
+  '/assets_query/v2/{account_id}/deployments/{deployment_id}/exposures/{asset_type}/summary':
+    get:
+      summary: Your GET endpoint
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: {}
+      operationId: get_deployment_exposures_summary
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+      - schema:
+          type: string
+        name: deployment_id
+        in: path
+        required: true
+      - schema:
+          type: string
+        name: asset_type
+        in: path
+        required: true
+  '/assets_query/v1/{account_id}/deployments/{deployment_id}/tags/summary':
+    get:
+      summary: Your GET endpoint
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: {}
+      operationId: get_tags_summary
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+      - schema:
+          type: string
+        name: deployment_id
+        in: path
+        required: true
+  '/remediations/v1/{account_id}/deployments/{deployment_id}/remediation-items-list':
+    get:
+      summary: Your GET endpoint
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: {}
+      operationId: get_remediations
+      description: ''
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+      - schema:
+          type: string
+        name: deployment_id
+        in: path
+        required: true
+  '/remediations/v1/{account_id}/deployments/{deployment_id}/assessment-specs':
+    get:
+      summary: Your GET endpoint
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version:
+                    type: string
+                  type:
+                    type: string
+                  threat_level:
+                    type: string
+      operationId: get_assessment_specs
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+      - schema:
+          type: string
+        name: deployment_id
+        in: path
+        required: true
+  '/assets_query/v1/{account_id}/find':
+    get:
+      summary: Your GET endpoint
+      tags: []
+      responses: {}
+      operationId: find_asset
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: collector_type
+        - schema:
+            type: string
+          in: query
+          name: uuid
+          required: true
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+components:
+  schemas: {}
+  securitySchemes:
+    X-AIMS-Auth-Token:
+      name: X-AIMS-Auth-Token
+      type: apiKey
+      in: header

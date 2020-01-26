@@ -1,0 +1,199 @@
+openapi: 3.0.2
+info:
+  title: policies
+  version: '1.0'
+servers:
+  - url: 'https://api.cloudinsight.alertlogic.com'
+    description: production
+    x-alertlogic-session-endpoint: true
+  - url: 'https://api.cloudinsight.product.dev.alertlogic.com'
+    description: integration
+    x-alertlogic-session-endpoint: true
+paths:
+  '/policies/v1/{account_id}/policies/{policy_id}':
+    get:
+      summary: Get Policy
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                title: Policy
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  product_family:
+                    type: string
+                  features:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                x-examples:
+                  Essentials Policy:
+                    name: Essentials
+                    id: A8E8B104-8F45-411D-A240-A30EA5FE25B0
+                    product_family: assess
+                    features:
+                      - type: scan
+                      - type: config_assessment
+                  Professional Policy:
+                    name: Professional
+                    id: D12D5E67-166C-474F-87AA-6F86FC9FB9BC
+                    product_family: detect
+                    features:
+                      - type: scan
+                      - type: config_assessment
+                      - type: ids
+                      - type: log
+                  Enterprise Policy:
+                    name: Enterprise
+                    id: EC735B49-2517-4D98-BB9D-BEBC1E75D56D
+                    product_family: respond
+                    features:
+                      - type: scan
+                      - type: config_assessment
+                      - type: ids
+                      - type: log
+        '403':
+          description: Account is not entitled for policy
+        '404':
+          description: Policy can not be found
+      operationId: get_policy
+      security:
+        - X-AIMS-Auth-Token: []
+      description: Returns the policy matching account_id and policy_id specified
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+      - schema:
+          type: string
+        name: policy_id
+        in: path
+        required: true
+  '/policies/v1/{account_id}/policies':
+    get:
+      summary: List Policies
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  title: Policy
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    product_family:
+                      type: string
+                    features:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          type:
+                            type: string
+                  x-examples:
+                    Essentials Policy:
+                      name: Essentials
+                      id: A8E8B104-8F45-411D-A240-A30EA5FE25B0
+                      product_family: assess
+                      features:
+                        - type: scan
+                        - type: config_assessment
+                    Professional Policy:
+                      name: Professional
+                      id: D12D5E67-166C-474F-87AA-6F86FC9FB9BC
+                      product_family: detect
+                      features:
+                        - type: scan
+                        - type: config_assessment
+                        - type: ids
+                        - type: log
+                    Enterprise Policy:
+                      name: Enterprise
+                      id: EC735B49-2517-4D98-BB9D-BEBC1E75D56D
+                      product_family: respond
+                      features:
+                        - type: scan
+                        - type: config_assessment
+                        - type: ids
+                        - type: log
+      operationId: list_policies
+      description: Lists policies belonging to a particular account
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+components:
+  schemas:
+    Policy:
+      title: Policy
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        product_family:
+          type: string
+        features:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+      x-examples:
+        Essentials Policy:
+          name: Essentials
+          id: A8E8B104-8F45-411D-A240-A30EA5FE25B0
+          product_family: assess
+          features:
+            - type: scan
+            - type: config_assessment
+        Professional Policy:
+          name: Professional
+          id: D12D5E67-166C-474F-87AA-6F86FC9FB9BC
+          product_family: detect
+          features:
+            - type: scan
+            - type: config_assessment
+            - type: ids
+            - type: log
+        Enterprise Policy:
+          name: Enterprise
+          id: EC735B49-2517-4D98-BB9D-BEBC1E75D56D
+          product_family: respond
+          features:
+            - type: scan
+            - type: config_assessment
+            - type: ids
+            - type: log
+  securitySchemes:
+    X-AIMS-Auth-Token:
+      name: X-AIMS-Auth-Token
+      type: apiKey
+      in: header
+      description: AIMS Authentication Token
+

@@ -1,0 +1,305 @@
+openapi: 3.0.2
+info:
+  title: aetag service
+  version: '1.0'
+  description: Analytics Engine Tagset Service API
+servers:
+  - url: 'https://api.global-integration.us-west-2.product.dev.alertlogic.com'
+    description: integration
+    x-alertlogic-session-endpoint: false
+paths:
+  '/aetag/v1/{account_id}/tags/paths/{path}':
+    get:
+      summary: Get a tagset by path
+      tags:
+        - Tags Resources
+      responses:
+        '200':
+          description: OK
+      operationId: get_tagset_by_path
+      description: |
+        Return a specific tagset. Tags requested for a specific customer id are composed tagset which uses the definition to decide from where, what and how to merge tagsets together. The 'etag' header is set and may be used to cache the response by the caller. Global tags are not composed.
+      security:
+        - X-AIMS-Auth-Token: []
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: epoch
+          description: A positive integer representing an epoch
+        - schema:
+            type: string
+          in: query
+          name: ts
+          description: A unix epoch timestamp
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+        name: path
+        in: path
+        required: true
+  '/aetag/v1/tags/paths/{path}':
+    get:
+      summary: Get Global Scope Tagset by path
+      tags:
+        - Tags Resources
+      responses:
+        '200':
+          description: OK
+      operationId: get_global_tagset_by_path
+      security:
+        - X-AIMS-Auth-Token: []
+      description: |
+        Return a specific tagset. Tags requested for a all customers are composed tagset which uses the definition to decide from where, what and how to merge tagsets together. The 'etag' header is set and may be used to cache the response by the caller. Global tags are not composed.
+    parameters:
+      - schema:
+          type: string
+        name: path
+        in: path
+        required: true
+  '/aetag/v1/tags/ids/{id}':
+    get:
+      summary: Get Tagset by ID
+      tags: []
+      responses:
+        '200':
+          description: OK
+      operationId: get_tagset_by_id
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: id
+        in: path
+        required: true
+  /aetag/v1/tags:
+    parameters: []
+    post:
+      summary: Create/Update Tagset
+      operationId: create_global_tagset
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stored:
+                    type: string
+                required:
+                  - stored
+      description: Create new or update existing tagset
+      security:
+        - X-AIMS-Auth-Token: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tagset:
+                  type: object
+        description: Tagset Object
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: path
+          required: true
+          description: tagset object path
+  '/aetag/v1/tunings/paths/{path}':
+    get:
+      summary: Get Global Tuning Tagset by Path
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: {}
+      operationId: get_global_tuning_tagset_by_path
+      description: Get Global Tuning Tagset by Path
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: path
+        in: path
+        required: true
+  '/aetag/v1/{account_id}/tunings/paths/{path}':
+    get:
+      summary: Get Customer Tuning Tagset by Name
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: {}
+      operationId: get_tuning_tagset_by_path
+      description: "Return a specific tuning. The 'etag' header is set and may be used to cache the response by the caller. Tuning tagsets are not composed; they are simply retrieved from storage."
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+        name: path
+        in: path
+        required: true
+  /aetag/v1/tunings:
+    post:
+      summary: Create or update a global tuning tag set related to a trigger
+      operationId: create_global_tuning_tagset
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stored:
+                    type: string
+      description: |+
+        Create or update (overwrite) a tuning tagset. A tuning tag set is used by a trigger definition. This endpoint is intended for internal use only.
+
+
+      tags:
+        - Tuning Resources
+      security:
+        - X-AIMS-Auth-Token: []
+      parameters:
+        - schema:
+            type: string
+            maxLength: 0
+            minLength: 0
+          in: query
+          name: path
+          description: Trigger Path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tagest:
+                  type: object
+        x-alertlogic-request-body:
+          name: data
+    parameters: []
+  '/aetag/v1/{account_id}/tunings':
+    post:
+      summary: "Create or update a customer's tag set related to a trigger"
+      operationId: create_tuning_tagset
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stored:
+                    type: string
+      description: |
+        Create or update (overwrite) customer's tuning tagset. A tuning tagset is used by a trigger definition. This endpoint is intended for internal use only.
+      security:
+        - X-AIMS-Auth-Token: []
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: path
+          required: true
+          description: Trigger Path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tagset:
+                  type: object
+        x-alertlogic-request-body:
+          name: data
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+  '/aetag/v1/{account_id}/tags':
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+    post:
+      summary: Create / Update Customer Tagset
+      operationId: create_tagset
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stored:
+                    type: string
+      security:
+        - X-AIMS-Auth-Token: []
+      description: Create or update (overwrite) a tagset. A tagset is an instance of a previously stored definition.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tagest:
+                  type: object
+        x-alertlogic-request-body:
+          name: data
+        description: |+
+          map/object which validates against a given tagset definition
+
+
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: path
+          description: Tagset Definition Name/Path
+          required: true
+components:
+  schemas: {}
+  securitySchemes:
+    X-AIMS-Auth-Token:
+      name: X-AIMS-Auth-Token
+      type: apiKey
+      in: header
+      description: AIMS Authentication Token
+tags:
+  - name: Tags Resources
+    description: Analytics Engine Tags Resources Manupulation
+

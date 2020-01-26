@@ -1,0 +1,157 @@
+openapi: 3.0.2
+info:
+  title: ae_tuner
+  version: '1.0'
+  description: Analytics Engine Tuning Service
+servers:
+  - url: 'https://t0m8wscahi.execute-api.us-east-1.amazonaws.com/{basePath}'
+    variables:
+      basePath:
+        default: Integration
+paths:
+  '/aetuner/v1/{account_id}/analytics':
+    get:
+      summary: List Analytics for an account
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - properties:
+                      logmsgs:
+                        type: array
+                        items:
+                          type: string
+                  - properties:
+                      observations:
+                        type: array
+                        items:
+                          type: string
+                  - properties:
+                      telemetry:
+                        type: array
+                        items:
+                          type: string
+                type: object
+      operationId: list_analytics
+      security:
+        - aims_request_authorizer: []
+      description: List anayltics for an account
+      x-amazon-apigateway-integration:
+        uri:
+          'Fn::Sub': 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AETunerSrvFunction.Arn}/invocations'
+      parameters:
+        - schema:
+            type: string
+            enum:
+              - logsmsgs
+              - observations
+              - telemetry
+          in: query
+          name: datatype
+          description: |-
+            Data type used for analytics generation.
+            If this parameter omitted, analytics for all data types are returned.
+        - schema:
+            type: string
+            enum:
+              - all
+              - correlations
+              - analytics
+            default: all
+          in: query
+          name: output
+          description: What to include in the response
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+  '/aetuner/v1/{account_id}/analytics/{path}':
+    get:
+      summary: Get Analytic for a specific customer
+      tags: []
+      responses:
+        '200':
+          description: OK
+      operationId: get_analytic
+      security:
+        - aims_request_authorizer: []
+      description: Returns an analytic for a specific customer
+      x-amazon-apigateway-integration:
+        uri:
+          'Fn::Sub': 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AETunerGetAnalyticFunction.Arn}/invocations'
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+        name: path
+        in: path
+        required: true
+        description: Analytic Fully Qualified Name
+    post:
+      summary: Update Analytics
+      operationId: update_analytic
+      responses:
+        '201':
+          description: Created
+      security:
+        - aims_request_authorizer: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                visibility:
+                  type: string
+                  description: Genereate an observation or an incident
+                  enum:
+                    - observation
+                    - incident
+                severity:
+                  type: string
+                  description: Severity of the observation/incident genereated by an analytic
+                  enum:
+                    - critical
+                    - high
+                    - medium
+                    - low
+                    - informational
+                tuning:
+                  type: object
+                  description: Tuning Parameters. The list of tuning parameters depends on the analytic being tuned. Tunable options can be seen in `tuning_properties` property of the `analytic` object returned by get_analytic for the analytic.
+      description: Update an ananlytic
+      x-amazon-apigateway-integration:
+        uri:
+          'Fn::Sub': 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AETunerUpdateAnalyticFunction.Arn}/invocations'
+components:
+  securitySchemes:
+    auth:
+      type: apiKey
+      in: header
+      name: X-AIMS-Auth-Token
+      description: AIMS Authentication Token
+    aims_request_authorizer:
+      type: apiKey
+      name: X-AIMS-Auth-Token
+      in: header
+      x-amazon-apigateway-authtype: custom
+      x-amazon-apigateway-authorizer:
+        authorizerUri:
+          'Fn::Sub': 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AIMSTokenAuthorizerFunction.Arn}/invocations'
+        authorizerResultTtlInSeconds: 300
+        identitySource: 'method.request.header.X-AIMS-Auth-Token, context.path'
+        type: request
+  schemas: {}
+

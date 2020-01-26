@@ -1,0 +1,309 @@
+openapi: 3.0.2
+info:
+  title: Themis Service
+  version: '1.0'
+  description: |
+    Alert Logic MDR External Permissions Management Service
+servers:
+  - url: 'https://api.cloudinsight.alertlogic.com'
+    description: production
+    x-alertlogic-session-endpoint: true
+  - url: 'https://api.cloudinsight.product.dev.alertlogic.com'
+    description: integration
+    x-alertlogic-session-endpoint: true
+paths:
+  '/themis/v1/{account_id}/roles/{platform_type}/{role_type}/{role_version}':
+    get:
+      summary: Get role
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                properties:
+                  type:
+                    type: string
+                  platform_type:
+                    type: string
+                  policy_document:
+                    type: object
+                  external_id:
+                    type: string
+                  aws_account_id:
+                    type: string
+                  version:
+                    type: string
+                  cft:
+                    type: object
+                    properties:
+                      s3_bucket:
+                        type: string
+                      s3_key:
+                        type: string
+                      s3_url:
+                        type: string
+                    required:
+                      - s3_bucket
+                type: object
+                title: ThemisRoleInfo
+              examples:
+                Themis CI Full Role Response:
+                  value:
+                    type: ci_full
+                    platform_type: aws
+                    policy_document: {}
+                    external_id: '01000001'
+                    aws_account_id: '948063967832'
+                    version: '2018-01-01'
+                    cft:
+                      s3_bucket: alertlogic-cloud-formation-templates
+                      s3_key: ci_full/2018-01-01
+                      s3_url: 'https://s3.amazonaws.com/alertlogic-cloud-formation-templates/ci_full/2018-01-01'
+      operationId: get_role
+      parameters: []
+      security:
+        - X-AIMS-Auth-Token: []
+      description: Get Role
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+      - schema:
+          type: string
+        name: platform_type
+        in: path
+        required: true
+      - schema:
+          type: string
+        name: role_type
+        in: path
+        required: true
+      - schema:
+          type: string
+        name: role_version
+        in: path
+        required: true
+  '/themis/v1/{account_id}/roles':
+    get:
+      summary: Get all latest roles matching query string parameters
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  properties:
+                    type:
+                      type: string
+                    platform_type:
+                      type: string
+                    policy_document:
+                      type: object
+                    external_id:
+                      type: string
+                    aws_account_id:
+                      type: string
+                    version:
+                      type: string
+                    cft:
+                      type: object
+                      properties:
+                        s3_bucket:
+                          type: string
+                        s3_key:
+                          type: string
+                        s3_url:
+                          type: string
+                      required:
+                        - s3_bucket
+                  type: object
+                  title: ThemisRoleInfo
+      operationId: get_roles
+      security:
+        - X-AIMS-Auth-Token: []
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: platform_type
+      description: Get all latest roles matching query string parameters
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+  '/themis/v1/validate/{platform_type}/{role_type}':
+    post:
+      summary: Validate AWS IAM role provided by the customer across AlertLogic requirements
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  version:
+                    type: string
+                  message:
+                    type: string
+              examples:
+                200 Validation Successful:
+                  value:
+                    status: latest
+                    message: Validation successful
+                    version: '2017-11-27'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  message:
+                    type: string
+      operationId: validate_credentials
+      security:
+        - X-AIMS-Auth-Token: []
+      requestBody:
+        description: AWS request body parameters
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AWSValidateRoleInfo'
+              x-alertlogic-schema:
+                name: credentials
+            examples:
+              Validate Payload Example:
+                value:
+                  platform_type: aws
+                  role_type: ci_full
+                  arn: 'arn:aws:iam::386539788298:role/alertlogic'
+                  external_id: '9786756453'
+                  role_version: '2018-01-01'
+        x-alertlogic-request-body:
+          name: credentials
+      description: Validate AWS IAM role provided by the customer across AlertLogic requirements
+    parameters:
+      - schema:
+          type: string
+          enum:
+            - aws
+        name: platform_type
+        in: path
+        required: true
+        description: The platform type
+      - schema:
+          type: string
+          enum:
+            - ci_manual
+            - ci_full
+            - cd_full
+            - ci_x_account_ct
+            - ci_essentials
+            - ci_readonly
+        name: role_type
+        in: path
+        required: true
+        description: The role type for validation
+components:
+  schemas:
+    ThemisRoleInfo:
+      title: ThemisRoleInfo
+      type: object
+      properties:
+        type:
+          type: string
+        platform_type:
+          type: string
+        policy_document:
+          type: object
+        external_id:
+          type: string
+        aws_account_id:
+          type: string
+        version:
+          type: string
+        cft:
+          type: object
+          properties:
+            s3_bucket:
+              type: string
+            s3_key:
+              type: string
+            s3_url:
+              type: string
+          required:
+            - s3_bucket
+    AWSValidateRoleInfo:
+      title: credentials
+      type: object
+      x-examples:
+        AWS Validate Role Info Example:
+          platform_type: aws
+          role_type: ci_full
+          role_version: '2017-11-27'
+          arn: 'arn:aws:iam::386539788298:role/alertlogic'
+          external_id: '9786756453'
+      description: ''
+      properties:
+        platform_type:
+          type: string
+          description: The platform type
+          enum:
+            - aws
+        role_type:
+          type: string
+          description: The role type for validation
+          enum:
+            - ci_manual
+            - ci_full
+            - cd_full
+            - ci_x_account_ct
+            - ci_essentials
+            - ci_readonly
+        role_version:
+          type: string
+          description: 'Expected role version, if not specified the latest role version is validated'
+        arn:
+          type: string
+          description: AWS IAM role ARN
+        external_id:
+          type: string
+          description: AWS IAM role external ID
+      required:
+        - platform_type
+        - role_type
+        - arn
+        - external_id
+  securitySchemes:
+    X-AIMS-Auth-Token:
+      name: X-AIMS-Auth-Token
+      type: apiKey
+      in: header
+      description: AIMS Authentication Token
+

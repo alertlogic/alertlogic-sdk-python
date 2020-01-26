@@ -1,0 +1,2462 @@
+openapi: 3.0.2
+info:
+  title: AIMS Service
+  version: '1.0'
+  description: 'Access and Identity Management Service '
+  contact:
+    email: support@alertlogic.com
+    name: Alert Logic Support
+servers:
+  - url: 'https://api.global-services.global.alertlogic.com'
+    description: production
+    x-alertlogic-session-endpoint: true
+  - url: 'https://api.global-integration.product.dev.alertlogic.com'
+    description: integration
+    x-alertlogic-session-endpoint: true
+paths:
+  '/aims/v1/{account_id}/account':
+    get:
+      summary: Get Account Details
+      tags:
+        - AIMS Account Resources
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountInfo'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '410':
+          description: Gone
+      operationId: get_account_details
+      description: Get account details
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl -X GET "https://api.global-services.global.alertlogic.com/aims/v1/12345678/account"
+        - lang: Python
+          source: |
+            import almdrlib 
+            from almdrlib.session import Session
+
+            session = Session(access_key_id="mykey", secret_key="mysecret")
+            aims = session.client("aims")
+            res = aims.get_account_details(account_id = "111111111")
+            print(res.json())
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+    post:
+      summary: Update account details
+      operationId: update_account_details
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountInfo'
+              examples:
+                Update Account Response Example:
+                  value:
+                    id: '12345678'
+                    name: Company Name
+                    active: true
+                    version: 2
+                    accessible_locations:
+                      - insight-us-virginia
+                    default_location: insight-us-virginia
+                    mfa_required: true
+                    created:
+                      at: 1430184599
+                      by: System
+                    modified:
+                      at: 1430189634
+                      by: System
+      description: 'To update an account, the client must have permission to update the specified account (aims:<account_id>:update:account). The mfa_required field may be updated by any client with this permission.'
+      security:
+        - X-AIMS-Auth-Token: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mfa_required:
+                  type: boolean
+                  description: Determines whether multi-factor authentication (MFA) is required for users of the account. Defaults to false.
+            examples:
+              Update Account Details Response Example:
+                value:
+                  id: '12345678'
+                  name: Company Name
+                  active: true
+                  version: 2
+                  accessible_locations:
+                    - insight-us-virginia
+                  default_location: insight-us-virginia
+                  mfa_required: true
+                  created:
+                    at: 1430184599
+                    by: System
+                  modified:
+                    at: 1430189634
+                    by: System
+        description: 'To update an account, the client must have permission to update the specified account (aims:<account_id>:update:account). The mfa_required field may be updated by any client with this permission.'
+      tags:
+        - AIMS Account Resources
+  '/aims/v1/{account_id}/accounts/{relationship}/{related_account_id}':
+    get:
+      summary: Get Account Relationship
+      tags:
+        - AIMS Account Resources
+      responses:
+        '204':
+          description: No Content
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '410':
+          description: Gone
+      operationId: get_account_relationship
+      description: |-
+        Check if the specified relationship between two accounts exists. Responds with 204 No Content if the specified relationship exists between the two accounts. Responds with 404 Not Found if the relationship between the two accounts does not exist.
+
+        Note that both the given account_id and related_account_id must be visible to the client. If either is not, a 403 Forbidden is returned to the client.
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X GET "https://api.global-services.global.alertlogic.com/aims/v1/12345678/accounts/managed/87654321"
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+          enum:
+            - bills_to
+            - managed
+            - managing
+        name: relationship
+        in: path
+        required: true
+        description: 'Account relationship. Accepted values: bills_to, managed, managing.'
+      - schema:
+          type: string
+        name: related_account_id
+        in: path
+        required: true
+        description: Possibly related account ID
+  '/aims/v1/accounts/name/{name}':
+    get:
+      summary: Get Details of Accounts By Name
+      tags:
+        - AIMS Account Resources
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accounts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AccountInfo'
+              examples:
+                Get Accounts by Name response example:
+                  value:
+                    accounts:
+                      - id: '12341234'
+                        name: Test Account
+                        active: true
+                        version: 1
+                        accessible_locations:
+                          - insight-us-virginia
+                        default_location: insight-us-virginia
+                        modified:
+                          by: System
+                          at: 1430184599
+                        created:
+                          by: System
+                          at: 1430184599
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      operationId: get_accounts_details_by_name
+      description: |-
+        Returns a list of accounts having the given name that the client has permission to access.
+
+        Note that if an empty list is returned, it may mean that an account with the name exists, but the client does not have permission to access it.
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: name
+        in: path
+        required: true
+        description: 'Account name, URL encoded according to RFC3986. Note that the + character is not interpreted as a space (`) in this scheme; use%20` for spaces instead.'
+  '/aims/v1/{account_id}/account_ids/{relationship}':
+    get:
+      summary: List account IDs by relationship
+      tags:
+        - AIMS Account Resources
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  account_ids:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid_accessible_locations
+                      - invalid_relationship
+                      - invalid_option
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '410':
+          description: Gone
+      operationId: list_account_ids_by_relationship
+      parameters:
+        - schema:
+            type: boolean
+          in: query
+          name: active
+          description: Filter by account active status
+        - schema:
+            type: string
+          in: query
+          name: accessible_locations
+          description: 'Filter by accesible_location ids. Use comma separated format for multiple locations e.g. "insight-us-virginia,defender-us-denver"'
+      description: "Note that the managing account relationship is the inverse of the managed relationship. That is, looking up account IDs by the managing relationship denotes the list of account IDs that have a managed relationship to the given account_id. This list shows only account IDs which the calling client is authorized to view, so, for example, looking up managing account IDs for the client's own account will return an empty list regardless of whether accounts not visible to the client have a managed relationship to the given account_id."
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+          enum:
+            - bills_to
+            - managed
+            - managing
+        name: relationship
+        in: path
+        required: true
+        description: 'Account relationship. Accepted values: bills_to, managed, managing.'
+  '/aims/v1/{account_id}/accounts/{relationship}':
+    get:
+      summary: List accounts by relationship
+      tags:
+        - AIMS Account Resources
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AccountInfo'
+              examples:
+                List Relationship Result:
+                  value:
+                    accounts:
+                      - id: '12876543'
+                        name: Another Company Name
+                        active: true
+                        version: 1
+                        accessible_locations:
+                          - insight-us-virginia
+                        default_location: insight-us-virginia
+                        created:
+                          at: 1430184599
+                          by: System
+                        modified:
+                          at: 1430184599
+                          by: System
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid_accessible_locations
+                      - invalid_relationship
+                      - invalid_option
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '410':
+          description: Gone
+      operationId: list_accounts_by_relationship
+      description: "Note that the managing account relationship is the inverse of the managed relationship. That is, looking up the managing relationship returns the list of accounts that have a managed relationship to the given account_id. This list shows only accounts which the calling client is authorized to view, so, for example, looking up managing accounts for the client's own account will return an empty list regardless of whether accounts not visible to the client have a managed relationship to the given account_id."
+      security:
+        - X-AIMS-Auth-Token: []
+      parameters:
+        - schema:
+            type: boolean
+          in: query
+          name: active
+          description: Filter by account active status
+        - schema:
+            type: string
+          in: query
+          name: accessible_locations
+          description: 'Filter by accessible_location ids. Use comma separated format for multiple locations e.g. "insight-us-virginia,defender-us-denver"'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+          enum:
+            - bills_to
+            - managed
+            - managing
+        name: relationship
+        in: path
+        required: true
+        description: 'Account relationship. Accepted values: bills_to, managed, managing.'
+  /aims/v1/change_password:
+    post:
+      summary: "Change a user's password"
+      operationId: change_password
+      responses:
+        '204':
+          description: No Content
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - weak_password
+                      - password_reuse_prevented
+        '401':
+          description: Unauthorized
+        '503':
+          description: Service Unavailable
+      description: |-
+        The new password must conform to the following standards:
+
+        Cannot be identical to current or previous passwords (up to 4 previous passwords checked)
+        Length of at least 12 characters
+        Contain three of four possible character types:
+        1) Upper case characters
+        2) Lower case characters
+        3) Numbers
+        4) Special characters (!"#$%&'()*+,-./:;<=>?@[]^_`{|}~)
+        Passwords can be specified as UTF-8. Characters in languages that do not have upper or lower case variants qualify as either upper or lower case.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: ''
+              properties:
+                email:
+                  type: string
+                  description: Email address
+                current_password:
+                  type: string
+                  description: Current password
+                new_password:
+                  type: string
+                  description: New password
+              required:
+                - email
+                - current_password
+                - new_password
+      tags:
+        - AIMS Authentication and Authorization Resources
+  /aims/v1/token_info:
+    get:
+      summary: Get Authentication Token Information
+      tags:
+        - AIMS Authentication and Authorization Resources
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  account:
+                    $ref: '#/components/schemas/AccountInfo'
+                  entity_id:
+                    type: string
+                  entity_type:
+                    type: string
+                  requester_id:
+                    type: string
+                  roles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Role'
+                  token_expiration:
+                    type: number
+                  user:
+                    $ref: '#/components/schemas/User'
+              examples:
+                Token Information Response Example:
+                  value:
+                    account:
+                      id: '12345678'
+                      name: Company Name
+                      active: true
+                      version: 1
+                      accessible_locations:
+                        - insight-us-virginia
+                      default_location: insight-us-virginia
+                      created:
+                        at: 1430184599
+                        by: System
+                      modified:
+                        at: 1430184599
+                        by: System
+                    entity_id: 715A4EC0-9833-4D6E-9C03-A537E3F98D23
+                    entity_type: user
+                    requester_id: '12345678:user:715A4EC0-9833-4D6E-9C03-A537E3F98D23'
+                    roles:
+                      - id: F578CCE5-9574-4489-BF05-A04075838DE3
+                        account_id: '12345678'
+                        name: Read Only
+                        permissions:
+                          '*:own:list:*': allowed
+                          '*:own:get:*': allowed
+                        legacy_permissions: []
+                        version: 1
+                        created:
+                          at: 1430184599
+                          by: System
+                        modified:
+                          at: 1430184599
+                          by: System
+                    token_expiration: 1524779722
+                    user:
+                      id: 715A4EC0-9833-4D6E-9C03-A537E3F98D23
+                      account_id: '12345678'
+                      name: Bob Dobalina
+                      username: admin@company.com
+                      email: admin@company.com
+                      active: true
+                      locked: false
+                      version: 1
+                      linked_users:
+                        - location: defender-us-denver
+                          user_id: 102
+                      created:
+                        at: 1430185015
+                        by: System
+                      modified:
+                        at: 1430185015
+                        by: System
+        '401':
+          description: |-
+            Unauthorized
+            The AuthenticationToken passed could not be authenticated.
+      operationId: get_token_info
+      description: 'Obtain Authentication Token Information (Account, User, Roles, etc.)'
+      security:
+        - X-AIMS-Auth-Token: []
+  /aims/v1/reset_password:
+    post:
+      summary: Initiate Password Reset
+      operationId: initiate_password_reset
+      responses:
+        '204':
+          description: No Content
+        '503':
+          description: |-
+            Service Unavailable
+            Server writes are disabled.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - writes_disabled
+      security:
+        - X-AIMS-Auth-Token: []
+      description: Initiate the password reset process for a user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  description: Email address
+                return_to:
+                  type: string
+                  description: "A URL to return to after successfully resetting the user's password"
+              required:
+                - email
+                - return_to
+            examples:
+              Inititiate Password Reset Example:
+                value:
+                  email: admin@company.com
+                  return_to: 'https://console.alertlogic.net'
+      tags:
+        - AIMS Authentication and Authorization Resources
+  '/aims/v1/reset_password/{token}':
+    parameters:
+      - schema:
+          type: string
+        name: token
+        in: path
+        required: true
+        description: Password reset token
+    put:
+      summary: Reset Password
+      operationId: reset_password
+      responses:
+        '204':
+          description: No Content
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - weak_password
+                      - password_reuse_prevented
+        '404':
+          description: |-
+            Not Found
+            The token provided was not found or has expired.
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - writes_disabled
+      description: |-
+        Reset a user's password using a token
+
+        The token is emailed to a user's email when POST /aims/v1/reset_password is called successfully.
+
+        The new password must conform to the following standards:
+
+        Cannot be identical to current or previous passwords (up to 4 previous passwords checked)
+        Length of at least 12 characters
+        Contain three of four possible character types:
+        1) Upper case characters
+        2) Lower case characters
+        3) Numbers
+        4) Special characters (!"#$%&'()*+,-./:;<=>?@[]^_`{|}~)
+        Passwords can be specified as UTF-8. Characters in languages that do not have upper or lower case variants qualify as either upper or lower case.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                '':
+                  type: string
+                  description: New password
+              required:
+                - ''
+            examples:
+              Password Reset Payload Example:
+                value:
+                  password: hunter2
+      tags:
+        - AIMS Authentication and Authorization Resources
+  '/aims/v1/{account_id}/roles':
+    post:
+      summary: Create Role
+      operationId: create_role
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid_json
+                      - invalid_permissions
+                      - missing_required_property
+                      - invalid_property
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '410':
+          description: Gone
+        '413':
+          description: Request Entity Too Large
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - writes_disabled
+      security:
+        - X-AIMS-Auth-Token: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                permissions:
+                  type: object
+            examples:
+              Create Role Request Example:
+                value:
+                  name: Super Mega Power User
+                  permissions:
+                    '*:own:*:*': allowed
+                    'aims:own:grant:*': allowed
+      x-code-samples:
+        - lang: "Request Sample"
+          source: |
+              curl -X POST -d '{"name": "Super Mega Power User", "permissions": {"*:own:*:*": "allowed", "aims:own:grant:*":"allowed"}}' "https://api.cloudinsight.alertlogic.com/aims/v1/12345678/roles"
+
+      tags:
+        - AIMS Role Resources
+      description: Create a role
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+    get:
+      summary: List Roles
+      operationId: list_roles
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Role'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '410':
+          description: Gone
+      description: |
+        List roles for an account. Global roles are included in the list.
+      security:
+        - X-AIMS-Auth-Token: []
+      tags:
+        - AIMS Role Resources
+  '/aims/v1/{account_id}/roles/{role_id}':
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+        name: role_id
+        in: path
+        required: true
+        description: Role ID
+    delete:
+      summary: Delete Role
+      operationId: delete_role
+      responses:
+        '204':
+          description: No Content
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - writes_disabled
+      description: 'Role deletion is permanent. Due to caching and the distributed nature of the data store, role deletion is also asynchronous; as a result, clients may be able to retrieve the deleted role (and grants of it to users) for a brief period after deleting it.'
+      security:
+        - X-AIMS-Auth-Token: []
+      tags:
+        - AIMS Role Resources
+    get:
+      summary: Get Role Details
+      operationId: get_role_details
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+              examples:
+                Get Role Response Example:
+                  value:
+                    id: 2A33175D-86EF-44B5-AA39-C9549F6306DF
+                    account_id: '12345678'
+                    name: Power User
+                    permissions:
+                      'aims:own:revoke:*': denied
+                      'aims:own:grant:*': denied
+                      'aims:own:delete:*': denied
+                      'aims:own:update:*': denied
+                      'aims:own:create:*': denied
+                      '*:own:*:*': allowed
+                    legacy_permissions: []
+                    version: 1
+                    created:
+                      at: 1430184599
+                      by: System
+                    modified:
+                      at: 1430184599
+                      by: System
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '410':
+          description: Gone
+      security:
+        - X-AIMS-Auth-Token: []
+      tags:
+        - AIMS Role Resources
+      description: Get role
+    post:
+      summary: Update Role Details
+      operationId: update_role_details
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+              examples:
+                Update Role Details Response Example:
+                  value:
+                    id: 2A33175D-86EF-44B5-AA39-C9549F6306DF
+                    account_id: '12345678'
+                    name: Mega Power User
+                    permissions:
+                      'aims:own:grant:*': allowed
+                      '*:own:*:*': allowed
+                    legacy_permissions: []
+                    version: 2
+                    created:
+                      at: 1430184599
+                      by: System
+                    modified:
+                      at: 1430185936
+                      by: System
+      description: "The role's name, permissions, or both may be updated."
+      security:
+        - X-AIMS-Auth-Token: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                permissions:
+                  type: object
+            examples:
+              Update Role Details Request Example:
+                value:
+                  name: Mega Power User
+                  permissions:
+                    '*:own:*:*': allowed
+                    'aims:own:grant:*': allowed
+      tags:
+        - AIMS Role Resources
+  '/aims/v1/roles/{role_id}':
+    get:
+      summary: Get Global Role Details
+      tags:
+        - AIMS Role Resources
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+              examples:
+                Get Global Role Details Response Example:
+                  value:
+                    id: 2A33175D-86EF-44B5-AA39-C9549F6306DF
+                    account_id: '*'
+                    name: Power User
+                    permissions:
+                      'aims:own:revoke:*': denied
+                      'aims:own:grant:*': denied
+                      'aims:own:delete:*': denied
+                      'aims:own:update:*': denied
+                      'aims:own:create:*': denied
+                      '*:own:*:*': allowed
+                    legacy_permissions: []
+                    version: 1
+                    global: true
+                    created:
+                      at: 1430184599
+                      by: System
+                    modified:
+                      at: 1430184599
+                      by: System
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+      operationId: get_global_role_details
+      description: |
+        Get global role, a role that is shared among accounts.
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: role_id
+        in: path
+        required: true
+        description: Role ID
+  /aims/v1/roles:
+    get:
+      summary: List Global Roles
+      tags:
+        - AIMS Role Resources
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Role'
+              examples:
+                List Global Roles Response Example:
+                  value:
+                    roles:
+                      - id: F578CCE5-9574-4489-BF05-A04075838DE3
+                        account_id: '*'
+                        name: Read Only
+                        permissions:
+                          '*:own:list:*': allowed
+                          '*:own:get:*': allowed
+                        legacy_permissions: []
+                        version: 1
+                        global: true
+                        created:
+                          at: 1430184599
+                          by: System
+                        modified:
+                          at: 1430184599
+                          by: System
+                      - id: 2A33175D-86EF-44B5-AA39-C9549F6306DF
+                        account_id: '*'
+                        name: Power User
+                        permissions:
+                          'aims:own:revoke:*': denied
+                          'aims:own:grant:*': denied
+                          'aims:own:delete:*': denied
+                          'aims:own:update:*': denied
+                          'aims:own:create:*': denied
+                          '*:own:*:*': allowed
+                        legacy_permissions: []
+                        version: 1
+                        global: true
+                        created:
+                          at: 1430184599
+                          by: System
+                        modified:
+                          at: 1430184599
+                          by: System
+                      - id: 4389AB00-BBCC-4EB1-83E9-7A906A452BF0
+                        account_id: '*'
+                        name: Administrator
+                        permissions:
+                          '*:own:*:*': allowed
+                        legacy_permissions: []
+                        version: 1
+                        global: true
+                        created:
+                          at: 1430184599
+                          by: System
+                        modified:
+                          at: 1430184599
+                          by: System
+        '401':
+          description: Unauthorized
+      operationId: list_global_roles
+      description: |
+        List global roles, roles that are shared among all accounts.
+      security:
+        - X-AIMS-Auth-Token: []
+  /aims/v1/user/mfa/enroll:
+    post:
+      summary: Enroll User Multi-Factor Authentication Device
+      operationId: mfa_enroll
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              examples:
+                Enroll User MFA Device Response Example:
+                  value:
+                    id: 715A4EC0-9833-4D6E-9C03-A537E3F98D23
+                    account_id: '12345678'
+                    name: Bob Dobalina
+                    username: admin@company.com
+                    email: admin@company.com
+                    active: true
+                    locked: false
+                    mfa_enabled: true
+                    version: 1
+                    linked_users: []
+                    created:
+                      at: 1430185015
+                      by: System
+                    modified:
+                      at: 1430185015
+                      by: System
+      description: |-
+        Enroll a user in multi-factor authentication. Requires either username/password or a valid X-Aims-Session-Token header to enroll. The user must input an RFC 6238 compatible Time-based One-Time Password secret as an otpauth:// format URI (See Google Authenticator's Key URI Format Docs) for complete details. The following parameters must be set in the mfa_uri:
+
+        TYPE must be totp
+        LABEL must be the issuer "Alert Logic", colon ":" and user's email, e.g. Alert%20Logic:admin@company.com
+        secret must be an arbitrary value between 16-20 bytes, in non-padded Base32 encoding, e.g., the ASCII string "1s tHiS s3kr3t S4F3?" is GFZSA5CINFJSA4ZTNNZDG5BAKM2EMMZ7 in Base32
+        issuer must be "Alert Logic", i.e. issuer=Alert%20Logic
+        algorithm must be SHA1
+        digits must be an integer greater than or equal to 6; the default (if missing) is 6
+        period must be an integer between 30-60 (seconds); the default (if missing) is 30
+        Example mfa_uri: otpauth://totp/Alert%20Logic:admin@company.com?secret=GFZSA5CINFJSA4ZTNNZDG5BAKM2EMMZ7&issuer=Alert%20Logic&algorithm=SHA1
+
+        The request must also include mfa_codes, an array of 2 or more MFA codes generated by the MFA device. These codes must be valid prior to successful device enrollment.
+
+        A user can only enroll an MFA device if they have not already enrolled one. If the user has already enrolled an MFA device, that device must be removed prior to enrolling a different one.
+
+        Once a user enrolls an MFA device, the user is required to provide a valid mfa_code during username/password authentication.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mfa_uri:
+                  type: string
+                  description: 'TOTP MFA URI, in otpauth:// format'
+                mfa_codes:
+                  type: array
+                  description: list of String 2 or more MFA codes generated by the MFA device for verification.
+                  items:
+                    type: string
+                email:
+                  type: string
+                  description: User email address (username)
+                password:
+                  type: string
+                  description: User password
+              required:
+                - mfa_uri
+                - mfa_codes
+            examples: {}
+        description: ''
+      parameters:
+        - schema:
+            type: string
+          in: header
+          name: X-Aims-Session-Token
+          description: The session token header from a call to POST /aims/v1/authenticate
+      tags:
+        - AIMS User MFA Resources
+  '/aims/v1/user/mfa/{email}':
+    parameters:
+      - schema:
+          type: string
+        name: email
+        in: path
+        required: true
+    delete:
+      summary: "Remove User's Multi-Factor Authentication Device"
+      operationId: remove_mfa_device
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              examples:
+                Remove MFA Device:
+                  value:
+                    id: 715A4EC0-9833-4D6E-9C03-A537E3F98D23
+                    account_id: '12345678'
+                    name: Bob Dobalina
+                    username: admin@company.com
+                    email: admin@company.com
+                    active: true
+                    locked: false
+                    version: 1
+                    linked_users: []
+                    created:
+                      at: 1430185015
+                      by: System
+                    modified:
+                      at: 1430185015
+                      by: System
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - writes_disabled
+      security:
+        - X-AIMS-Auth-Token: []
+      description: |-
+        Removes a user's MFA device. This endpoint can be called by any authenticated user to remove their own MFA device. Administrators (or other users with sufficient permissions) may remove the MFA device of another user.
+
+        Once a user's MFA device is removed (user field mfa_enabled set to false), the user will no longer be required to enter an mfa_code during authentication. The user may then enroll a new MFA device if desired.
+      tags:
+        - AIMS User MFA Resources
+  '/aims/v1/{account_id}/users/{user_id}/access_keys':
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+        name: user_id
+        in: path
+        required: true
+        description: AIMS User ID
+    post:
+      summary: Create Access Key
+      operationId: create_access_key
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              examples:
+                Create Access Key Response Example:
+                  value:
+                    access_key_id: 61fb235617960503
+                    user_id: 715A4EC0-9833-4D6E-9C03-A537E3F98D23
+                    account_id: '12345678'
+                    label: api access
+                    created:
+                      at: 1525410880
+                      by: system
+                    modified:
+                      at: 1525410880
+                      by: system
+                    secret_key: c189b933c26ace44208bc6ed31739a1ce31d9b04f25a611dc3b6c9ee2806f9c7
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid_label
+                      - invalid_json
+                      - limit_exceeded
+                      - missing_required_property
+                      - invalid_property
+        '401':
+          description: |-
+            Unauthorized
+
+            The AuthenticationToken passed could not be authenticated.
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '410':
+          description: Gone
+        '413':
+          description: Request Entity Too Large
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - writes_disabled
+      description: |-
+        Create an access key for a user
+
+        A label can be associated with an access key. If a label is specified, a valid JSON body must be provided.
+        No more than 5 keys can be created for a user.
+      security:
+        - X-AIMS-Auth-Token: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+                  description: A label for the access key
+      tags:
+        - AIMS User Resources
+    get:
+      summary: List Access Keys
+      operationId: list_access_keys
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - items:
+                      type: string
+                  - items:
+                      $ref: '#/components/schemas/AccessKey'
+                type: array
+              examples:
+                List Access Keys Response Example:
+                  value:
+                    access_keys:
+                      - 61fb235617960503
+                      - c94bbb077a7ccf26
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '410':
+          description: Gone
+      description: |-
+        List user access keys.
+
+        If an output format is not specified using the out query parameter, only access key IDs are returned.
+      security:
+        - X-AIMS-Auth-Token: []
+      parameters:
+        - schema:
+            type: string
+            enum:
+              - ids_only
+              - full
+          in: query
+          name: out
+      tags:
+        - AIMS User Resources
+  '/aims/v1/{account_id}/users':
+    post:
+      summary: Create User
+      operationId: create_user
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - account_inactive
+                      - invalid_email
+                      - invalid_json
+                      - invalid_option
+                      - invalid_role_id
+                      - weak_password
+                      - invalid_mobile_phone
+                      - invalid_phone
+                      - invalid_webhook_url
+                      - missing_required_property
+                      - invalid_property
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - user_exists
+        '410':
+          description: Gone
+        '413':
+          description: Request Entity Too Large
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - writes_disabled
+      parameters:
+        - schema:
+            type: boolean
+          in: query
+          name: one_time_password
+          description: 'Create a user with a one time password credential. If not set, one_time_password defaults to "false".'
+      description: |-
+        Create a user
+
+        The user's password must conform to the following standards:
+
+        Length of at least 12 characters
+        Contain three of four possible character types:
+        1) Upper case characters
+        2) Lower case characters
+        3) Numbers
+        4) Special characters (!"#$%&'()*+,-./:;<=>?@[]^_`{|}~)
+        Passwords can be specified as UTF-8. Characters in languages that do not have upper or lower case variants qualify as either upper or lower case.
+
+        It is possible to set a one time password by sending a query parameter (one_time_password) with a boolean value, see example below.
+
+        The mobile phone number, phone number and webhook url fields are optional. If mobile phone and/or phone included, their strings must contain at least 10 numbers and be no more than 30 characters. If webhook url is included, the url must be a valid http/https url.
+
+        The notifications_only flag is optional. If the flag is set to true, the user will not receive welcome email, password expiration/change related emails, and the user will not be able to authenticate.
+      tags:
+        - AIMS User Resources
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Username
+                email:
+                  type: string
+                  description: Email address
+                password:
+                  type: string
+                  description: 'Password If a password is not passed to the user create call, the user will receive an email with a link to set the password.'
+                role_id:
+                  type: string
+                  description: 'Role Id to grant the newly created user. The user will be granted this role unless it is the first user created in the account, which is always granted the administrator role.'
+                active:
+                  type: boolean
+                  description: |-
+                    User status.
+
+                    Default value: true
+                mobile_phone:
+                  type: string
+                  description: "An optional string containing a user's mobile phone number."
+                phone:
+                  type: string
+                  description: "An optional string containing a user's phone number."
+                webhook_url:
+                  type: string
+                  description: "An optional string containing a user's webhook url."
+                notifications_only:
+                  type: boolean
+                  description: |-
+                    An optional boolean flag to make the user notifications only.
+
+                    Default value: false
+              required:
+                - name
+                - email
+            examples:
+              Create User Request Example:
+                value:
+                  name: Bob Dobalina
+                  email: admin@company.com
+                  password: Aa8^6;C28e748C
+                  mobile_phone: 123-555-0123
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+    get:
+      summary: List Users
+      operationId: list_users
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+              examples:
+                List Users Response Example:
+                  value:
+                    users:
+                      - id: 715A4EC0-9833-4D6E-9C03-A537E3F98D23
+                        account_id: '12345678'
+                        name: Bob Dobalina
+                        username: admin@company.com
+                        email: admin@company.com
+                        active: true
+                        locked: false
+                        version: 1
+                        linked_users:
+                          - location: defender-us-denver
+                            user_id: 102
+                        created:
+                          at: 1430185015
+                          by: System
+                        modified:
+                          at: 1430185015
+                          by: System
+      description: |
+        List account users
+      tags:
+        - AIMS User Resources
+      security:
+        - X-AIMS-Auth-Token: []
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: role_id
+          description: 'The role ID assigned to the user. If passed, only users who are granted the role with the specified role ID are returned.'
+        - schema:
+            type: boolean
+          in: query
+          name: include_role_ids
+          description: Optional query parameter to include the list of role ids assigned to each user in the response.
+        - schema:
+            type: boolean
+          in: query
+          name: include_user_credential
+          description: 'Optional query parameter to include the user credential object of each user in the response. If not set, defaults to false.'
+        - schema:
+            type: boolean
+          in: query
+          name: include_access_keys
+          description: 'Optional query parameter to include the access keys of each user in the response. If not set, defaults to false.'
+  '/aims/v1/{account_id}/users/{user_id}/access_keys/{access_key_id}':
+    delete:
+      summary: Delete Access Key
+      operationId: delete_access_key
+      responses:
+        '204':
+          description: No Content
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              examples:
+                Server writes are disabled error example:
+                  value:
+                    error: writes_disabled
+      description: "Delete a user's access key"
+      security:
+        - X-AIMS-Auth-Token: []
+      tags:
+        - AIMS User Resources
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+        name: user_id
+        in: path
+        required: true
+        description: AIMS User ID
+      - schema:
+          type: string
+        name: access_key_id
+        in: path
+        required: true
+        description: Access Key ID
+  '/aims/v1/{account_id}/users/{user_id}':
+    get:
+      summary: Get User Details
+      tags:
+        - AIMS User Resources
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              examples:
+                Response Example:
+                  value:
+                    id: 715A4EC0-9833-4D6E-9C03-A537E3F98D23
+                    account_id: '12345678'
+                    name: Bob Dobalina
+                    username: admin@company.com
+                    email: admin@company.com
+                    active: true
+                    locked: false
+                    version: 2
+                    linked_users:
+                      - location: defender-us-denver
+                        user_id: 102
+                    user_credential:
+                      version: '2'
+                      one_time_password: false
+                      last_login: 1548880711
+                      created:
+                        at: 1430185015
+                        by: System
+                      modified:
+                        at: 1430185015
+                        by: System
+                    created:
+                      at: 1430185015
+                      by: System
+                    modified:
+                      at: 1430185015
+                      by: System
+                    access_keys:
+                      - label: api access
+                        last_login: 0
+                        created:
+                          at: 1525410880
+                          by: system
+                        modified:
+                          at: 1525410880
+                          by: system
+                        access_key_id: 61fb235617960503
+      operationId: get_user_details
+      description: |
+        Get user details
+      parameters:
+        - schema:
+            type: boolean
+          in: query
+          name: include_role_ids
+          description: Optional query parameter to return the list of role ids assigned to the user.
+        - schema:
+            type: boolean
+          in: query
+          name: include_user_credential
+          description: 'Optional query parameter to include the user credential object of the user. If not set, defaults to true.'
+        - schema:
+            type: boolean
+          in: query
+          name: include_access_keys
+          description: 'Optional query parameter to include the access keys of the user. If not set, defaults to true.'
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+        name: user_id
+        in: path
+        required: true
+        description: AIMS User ID
+    post:
+      summary: Update User Details
+      operationId: update_user_details
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+      tags:
+        - AIMS User Resources
+      description: "Update user details\n\nThe user's active status, name, password, email, mobile phone, notifications only, or any combination of the five may be updated. Note that, if the client is requesting a change to his/her own user, the password, active and notifications_only fields may not be updated. Fields included in the request body that are not allowed to be updated are ignored. In order for the user to change his own password, use Change Password or Reset Password endpoints instead. Request a system admin user to update user's active field.\n\nThe user's password must conform to the following standards:\n\nCannot be identical to current or previous passwords (up to 4 previous passwords checked)\nLength of at least 12 characters\nContain three of four possible character types:\n1) Upper case characters\n2) Lower case characters\n3) Numbers\n4) Special characters (!\"#$%&'()*+,-./:;<=>?@[]^_`{|}~)\nPasswords can be specified as UTF-8. Characters in languages that do not have upper or lower case variants qualify as either upper or lower case.\n\nIt is possible to set a one time password by sending a query parameter (\"one_time_password\") with a boolean value, see example below.\n\nThe mobile phone number, phone number and webhook url fields are optional. If mobile phone and/or phone included, their strings must contain at least 10 numbers and be no more than 30 characters. If webhook url is included, the url must be a valid http/https url. In order to clear the optional fields, mobile phone, phone and webhook url, you must set it to an empty string as seen in \"clear optional field\" usage example.\n\nThe notifications only flag field is optional. If the flag is set to true, the user will not receive password expiration/change related emails and the user will not be able to authenticate.\n\n    "
+      security:
+        - X-AIMS-Auth-Token: []
+      parameters:
+        - schema:
+            type: boolean
+          in: query
+          name: one_time_password
+          description: 'Update a user with a one time password credential. If not set, one_time_password defaults to false.'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: New user name
+                password:
+                  type: string
+                  description: New password
+                email:
+                  type: string
+                  description: New email address
+                active:
+                  type: boolean
+                  description: User status
+                mobile_phone:
+                  type: string
+                  description: "An optional string containing a user's mobile phone number."
+                phone:
+                  type: string
+                  description: "An optional string containing a user's phone number."
+                webhook_url:
+                  type: string
+                  description: "An optional string containing a user's webhook url."
+                notifications_only:
+                  type: boolean
+                  description: An optional boolean flag to make the user notifications only.
+  '/aims/v1/user/{user_id}':
+    get:
+      summary: Get User Details by User ID
+      tags:
+        - AIMS User Resources
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              examples:
+                Get User Details by User ID Response Example:
+                  value:
+                    id: 715A4EC0-9833-4D6E-9C03-A537E3F98D23
+                    account_id: '12345678'
+                    name: Bob Dobalina
+                    username: admin@company.com
+                    email: admin@company.com
+                    active: true
+                    locked: false
+                    version: 1
+                    linked_users: []
+                    user_credential:
+                      version: '2'
+                      one_time_password: false
+                      last_login: 1548880711
+                      created:
+                        at: 1430185015
+                        by: System
+                      modified:
+                        at: 1430185015
+                        by: System
+                    created:
+                      at: 1430185015
+                      by: System
+                    modified:
+                      at: 1430185015
+                      by: System
+                    access_keys:
+                      - label: api access
+                        last_login: 0
+                        created:
+                          at: 1525410880
+                          by: system
+                        modified:
+                          at: 1525410880
+                          by: system
+                        access_key_id: 61fb235617960503
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '410':
+          description: Gone
+      operationId: get_user_details_by_id
+      security:
+        - X-AIMS-Auth-Token: []
+      description: Get user details by user ID
+      parameters:
+        - schema:
+            type: boolean
+          in: query
+          name: include_role_ids
+          description: Optional query parameter to return the list of role ids assigned to the user.
+        - schema:
+            type: boolean
+          in: query
+          name: include_user_credential
+          description: 'Optional query parameter to include the user credential object of the user. If not set, defaults to true.'
+        - schema:
+            type: boolean
+          in: query
+          name: include_access_keys
+          description: 'Optional query parameter to include the access keys of the user. If not set, defaults to true.'
+    parameters:
+      - schema:
+          type: string
+        name: user_id
+        in: path
+        required: true
+        description: AIMS User ID
+  '/aims/v1/user/username/{username}':
+    get:
+      summary: Get User Details by Username
+      tags:
+        - AIMS User Resources
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              examples:
+                Get User Details By Username Response Example:
+                  value:
+                    id: 715A4EC0-9833-4D6E-9C03-A537E3F98D23
+                    account_id: '12345678'
+                    name: Bob Dobalina
+                    username: admin@company.com
+                    email: admin@company.com
+                    active: true
+                    locked: false
+                    version: 1
+                    linked_users: []
+                    user_credential:
+                      version: '2'
+                      one_time_password: false
+                      last_login: 1548880711
+                      created:
+                        at: 1430185015
+                        by: System
+                      modified:
+                        at: 1430185015
+                        by: System
+                    created:
+                      at: 1430185015
+                      by: System
+                    modified:
+                      at: 1430185015
+                      by: System
+                    access_keys:
+                      - label: api access
+                        last_login: 0
+                        created:
+                          at: 1525410880
+                          by: system
+                        modified:
+                          at: 1525410880
+                          by: system
+                        access_key_id: 61fb235617960503
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '410':
+          description: Gone
+      operationId: get_user_details_by_username
+      description: Get user details by username
+      security:
+        - X-AIMS-Auth-Token: []
+      parameters:
+        - schema:
+            type: boolean
+          in: query
+          name: include_role_ids
+          description: Optional query parameter to return the list of role ids assigned to the user.
+        - schema:
+            type: boolean
+          in: query
+          name: include_user_credential
+          description: 'Optional query parameter to include the user credential object of the user. If not set, defaults to true.'
+        - schema:
+            type: boolean
+          in: query
+          name: include_access_keys
+          description: 'Optional query parameter to include the access keys of the user. If not set, defaults to true.'
+    parameters:
+      - schema:
+          type: string
+        name: username
+        in: path
+        required: true
+        description: User Username (URL encoded)
+  '/aims/v1/{account_id}/users/{user_id}/permissions':
+    get:
+      summary: Get User Permissions
+      tags:
+        - AIMS User Resources
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  permissions:
+                    type: array
+                    items:
+                      type: object
+              examples:
+                Get User Permissions Response Example:
+                  value:
+                    permissions:
+                      - '*:managed:*:*': allowed
+                      - '*:own:*:*': allowed
+                      - '*::get:*': allowed
+                      - '*::list:*': allowed
+                      - 'aims:own:create:role': denied
+                      - 'aims:own:update:role': denied
+                      - 'aims:own:delete:role': denied
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '410':
+          description: Gone
+      operationId: get_user_permissions
+      description: "Get user permissions\n\nUser's permissions are derived from the intersection of the permissions that they have based on the roles granted to the user.\n\nFor instance, If a user has a role that allows them permission {\"\\*:own:get:account\": \"allowed\"}, and another role that denies them that same permission {\"\\*:own:get:account\": \"denied\"}, the permissions list will only show the deny entry."
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+        name: user_id
+        in: path
+        required: true
+        description: AIMS User ID
+  '/aims/v1/{account_id}/users/{user_id}/roles/{role_id}':
+    put:
+      summary: Grant User Role
+      tags:
+        - AIMS User Resources
+      responses:
+        '204':
+          description: No Content
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - self_grant_error
+                      - invalid_role_id
+                      - admin_account_immutable
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '410':
+          description: Gone
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - writes_disabled
+      operationId: grant_user_role
+      description: |
+        Grant a role to a user
+
+        Users cannot grant roles to themselves. When granting the Administrator role to a user, all roles previously granted to that user will be revoked.
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+        name: user_id
+        in: path
+        required: true
+        description: AIMS User ID
+      - schema:
+          type: string
+        name: role_id
+        in: path
+        required: true
+        description: Role ID
+    delete:
+      summary: Revoke User Role
+      operationId: revoke_user_role
+      responses:
+        '204':
+          description: No Content
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - self_revoke_error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '410':
+          description: Gone
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - writes_disabled
+      description: |-
+        Revoke a role for a user
+
+        Users cannot revoke roles assigned to themselves. When revoking the Administrator role from a user, there must be at least one other user with the Administrator role present.
+      security:
+        - X-AIMS-Auth-Token: []
+      tags:
+        - AIMS User Resources
+  '/aims/v1/users/email/{email}':
+    get:
+      summary: List Users By Email
+      tags:
+        - AIMS User Resources
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+              examples:
+                List Users By Email Response Example:
+                  value:
+                    users:
+                      - id: 715A4EC0-9833-4D6E-9C03-A537E3F98D23
+                        account_id: '12345678'
+                        name: Bob Dobalina
+                        username: admin@company.com
+                        email: admin@company.com
+                        active: true
+                        locked: false
+                        version: 1
+                        linked_users:
+                          - location: defender-us-denver
+                            user_id: 102
+                        created:
+                          at: 1430185015
+                          by: System
+                        modified:
+                          at: 1430185015
+                          by: System
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      operationId: list_users_by_email
+      description: List Users By Email
+      security:
+        - X-AIMS-Auth-Token: []
+      parameters:
+        - schema:
+            type: boolean
+          in: query
+          name: include_role_ids
+          description: Optional query parameter to include the list of role ids assigned to each user in the response.
+          x-example: '?include_role_ids=true'
+        - schema:
+            type: boolean
+          in: query
+          name: include_user_credential
+          description: 'Optional query parameter to include the user credential object of each user in the response. If not set, defaults to false.'
+        - schema:
+            type: boolean
+          in: query
+          name: include_access_keys
+          description: 'Optional query parameter to include the access keys of each user in the response. If not set, defaults to false.'
+    parameters:
+      - schema:
+          type: string
+        name: email
+        in: path
+        required: true
+        description: User Email (URL encoded)
+  '/aims/v1/access_keys/{access_key_id}':
+    post:
+      summary: Update Access Key
+      tags:
+        - AIMS User Resources
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessKey'
+        '404':
+          description: Not Found
+      operationId: update_access_key
+      description: Update access key by ID
+      security:
+        - X-AIMS-Auth-Token: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+                  description: access key label to be updated
+        description: JSON with a label to be updated
+    parameters:
+      - schema:
+          type: string
+        name: access_key_id
+        in: path
+        required: true
+        description: Access key ID
+  /aims/v1/authenticate:
+    post:
+      summary: Authenticate
+      tags:
+        - AIMS Authentication and Authorization Resources
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  authentication:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      account:
+                        $ref: '#/components/schemas/AccountInfo'
+                      token:
+                        type: string
+                      token_expiration:
+                        type: number
+              examples:
+                Successful Authentication Response Example:
+                  value:
+                    authentication:
+                      user:
+                        id: 715A4EC0-9833-4D6E-9C03-A537E3F98D23
+                        account_id: '12345678'
+                        name: Bob Dobalina
+                        email: bob@company.com
+                        active: true
+                        locked: false
+                        version: 1
+                        created:
+                          at: 1430183768
+                          by: System
+                        modified:
+                          at: 1430183768
+                          by: System
+                      account:
+                        id: '12345678'
+                        name: Company Name
+                        active: true
+                        version: 1
+                        accessible_locations:
+                          - insight-us-virginia
+                        default_location: insight-us-virginia
+                        created:
+                          by: system
+                          at: 1436482061
+                        modified:
+                          by: system
+                          at: 1436482061
+                      token: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyIjoiMDAwMDAwMDAiLCJhY2NvdW50IjoiMDAwMDAwMDAiLCJleHBpcmF0aW9uIjoxNDMwMTg0Nzc2LCJyZW5ld19jb3VudGRvd24iOjI0fQ==.QKRHma5zAOdhU50ZE4ryPxVpvKt0A0gbjY62xHCWm8s=
+                      token_expiration: 1434042731
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - password_expired
+                      - account_inactive
+              examples:
+                400 password_expired:
+                  value:
+                    error: password_expired
+                400 account_inactive:
+                  value:
+                    error: account_inactive
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - mfa_code_required
+                      - invalid_session_token
+                      - mfa_enrollment_required
+              examples:
+                401 invalid_session_token:
+                  value:
+                    error: invalid_session_token
+                401 mfa_code_required:
+                  value:
+                    error: mfa_code_required
+                mfa_enrollment_required:
+                  value:
+                    error: mfa_enrollment_required
+      operationId: authenticate
+      description: |-
+        Authenticate a user's identity
+
+        The authenticate endpoint is used to verify a user's credentials (access key or username/password). Users may authenticate by base64 encoding the string username:password (or access_key_id:secret_key) and prepending it with the string Basic per RFC 2617. Note that common tools like curl and most HTTP libraries support encoding this automatically.
+
+        Successful authentication returns 200 OK with a JSON body containing the key authentication.token. This token may be passed (as the X-Aims-Auth-Token header) to subsequent API requests which require a user to be authenticated. The user's profile data is also included in the authentication key of the response body (see the examples below).
+
+        If authentication fails, 401 Unauthorized with an empty body and no HTTP headers is returned to the client.
+
+        Multi-Factor Authentication (MFA)
+
+        If the user is enrolled in Multi-Factor Authentication, then the mfa_code parameter must be passed. If a user inputs their correct username:password, but does not include the mfa_code, then a 401 Unauthorized with a JSON body containing the mfa_code_required error key is returned to the client. If the user is required to use MFA but has not configured it, the error key is mfa_enrollment_required instead. In both cases, an X-Aims-Session-Token header is also returned. This session token can be used to complete authentication without re-entering the username and password, but must be used within 3 minutes.
+
+        If an mfa_code is required, the client can call POST /aims/v1/authenticate again with the required mfa_code in the JSON POST body and either:
+
+        The X-Aims-Session-Token header from the initial authentication attempt
+        The Basic Authorization header with the username:password described above
+        Upon successful authentication, 200 OK is returned with a complete body as described above.
+
+        If the X-Aims-Session-Token header is expired or invalid, 401 Unauthorized with a JSON body containing the invalid_session_token error key is returned to the client.
+
+        If the mfa_code value is incorrect or missing, 401 Unauthorized with an empty body and no HTTP headers is returned to the client.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mfa_code:
+                  type: string
+                  description: "The MFA code generated by the user's MFA device"
+      parameters:
+        - schema:
+            type: string
+          in: header
+          name: X-Aims-Session-Token
+          description: The session token for authenticating with mfa_code
+      security:
+        - Basic HTTP Authorization: []
+components:
+  schemas:
+    AccountInfo:
+      title: AccountInfo
+      type: object
+      description: AIMS Account Information
+      x-examples:
+        Account Info Example:
+          id: '12345678'
+          name: Company Name
+          active: true
+          version: 1
+          accessible_locations:
+            - insight-us-virginia
+          default_location: insight-us-virginia
+          created:
+            at: 1430184599
+            by: System
+          modified:
+            at: 1430184599
+            by: System
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        active:
+          type: boolean
+        version:
+          type: number
+        accessible_locations:
+          type: array
+          items:
+            type: string
+        default_location:
+          type: string
+        created:
+          type: object
+          properties:
+            at:
+              type: number
+            by:
+              type: string
+        modified:
+          type: object
+          properties:
+            at:
+              type: number
+            by:
+              type: string
+    User:
+      title: User
+      type: object
+      properties:
+        id:
+          type: string
+        account_id:
+          type: string
+        name:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+        active:
+          type: boolean
+        locked:
+          type: boolean
+        linked_users:
+          type: array
+          items:
+            type: object
+            properties:
+              location:
+                type: string
+              user_id:
+                type: number
+        created:
+          type: object
+          properties:
+            at:
+              type: number
+            by:
+              type: string
+        modified:
+          type: object
+          properties:
+            at:
+              type: number
+            by:
+              type: string
+        user_credential:
+          type: object
+          properties:
+            version:
+              type: string
+            one_time_password:
+              type: boolean
+            last_login:
+              type: number
+            created:
+              type: object
+              properties:
+                at:
+                  type: number
+                by:
+                  type: string
+            modified:
+              type: object
+              properties:
+                at:
+                  type: number
+                by:
+                  type: string
+        access_keys:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccessKey'
+    Role:
+      title: Role
+      type: object
+      properties:
+        id:
+          type: string
+        account_id:
+          type: string
+        name:
+          type: string
+        permissions:
+          type: object
+          properties:
+            '[permission]':
+              type: string
+        legacy_permissions:
+          type: array
+          items:
+            type: string
+        version:
+          type: integer
+        created:
+          type: object
+          properties:
+            at:
+              type: number
+            by:
+              type: string
+        modified:
+          type: object
+          properties:
+            at:
+              type: number
+            by:
+              type: string
+    AccessKey:
+      title: AccessKey
+      type: object
+      properties:
+        label:
+          type: string
+        last_login:
+          type: number
+        created:
+          type: object
+          properties:
+            at:
+              type: number
+            by:
+              type: string
+        modified:
+          type: object
+          properties:
+            at:
+              type: number
+            by:
+              type: string
+        access_key_id:
+          type: string
+      description: User Access Key
+  securitySchemes:
+    X-AIMS-Auth-Token:
+      name: X-AIMS-Auth-Token
+      type: apiKey
+      in: header
+      description: AIMS Authentication Token
+    Basic HTTP Authorization:
+      type: http
+      scheme: basic
+tags:
+  - name: AIMS Account Resources
+    description: AIMS Account Resources Operations
+  - name: AIMS Role Resources
+    description: AIMS Role Resources Operations
+  - name: AIMS User MFA Resources
+    description: AIMS User MFA Resources Operations
+  - name: AIMS Authentication and Authorization Resources
+    description: AIMS Authentication and Authorization Resources Operations
+  - name: AIMS User Resources
+    description: AIMS User Resources Operations
+

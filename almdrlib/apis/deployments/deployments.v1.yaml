@@ -1,0 +1,372 @@
+openapi: 3.0.2
+info:
+  title: Deployments Service
+  version: '1.0'
+  description: 'Cloud Provider accounts mapping to deployments service'
+  contact:
+    email: support@alertlogic.com
+    name: Alert Logic Support
+servers:
+  - url: 'https://api.cloudinsight.alertlogic.com'
+    description: production
+    x-alertlogic-session-endpoint: true
+  - url: 'https://api.cloudinsight.product.dev.alertlogic.com'
+    description: integration
+    x-alertlogic-session-endpoint: true
+paths:
+  '/deployments/v1/{account_id}/deployments':
+    get:
+      summary: Your GET endpoint
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Deployment'
+      operationId: list_deployments
+      description: Lists deployments belonging to a particular account
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+    post:
+      summary: ''
+      operationId: create_deployment
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deployment'
+      description: Create new deployment
+      security:
+        - X-AIMS-Auth-Token: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeploymentInfo'
+  '/deployments/v1/{account_id}/deployments/{deployment_id}':
+    get:
+      summary: Your GET endpoint
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deployment'
+      operationId: get_deployment
+      description: Returns the deployment matching specified account_id and deployment_id
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+      - schema:
+          type: string
+        name: deployment_id
+        in: path
+        required: true
+    delete:
+      summary: ''
+      operationId: delete_deployment
+      responses:
+        '204':
+          description: No Content
+      description: Delete Deployment
+      security:
+        - X-AIMS-Auth-Token: []
+    put:
+      summary: ''
+      operationId: update_deployment
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deployment'
+      security:
+        - X-AIMS-Auth-Token: []
+components:
+  schemas:
+    DeploymentInfo:
+      title: DeploymentInfo
+      type: object
+      description: ''
+      properties:
+        name:
+          type: string
+          description: The name of the deployment
+        platform:
+          oneOf:
+            - $ref: '#/components/schemas/AWSDeploymentPlatformInfo'
+            - $ref: '#/components/schemas/AzureDeploymentPlatformInfo'
+            - $ref: '#/components/schemas/DatacenterDeploymentPlatformInfo'
+        mode:
+          type: string
+          enum:
+            - manual
+            - readonly
+            - automatic
+            - guided
+            - none
+          description: |-
+            For 'aws' deployments - Deployment mode (manual, readonly, automatic, guided or none). Default mode is automatic if not specified.
+            For 'azure' deployments - Deployment mode, must be manual
+            For 'datacenter' deployments - Deployment mode, must be manual
+        enabled:
+          type: boolean
+          default: 'True'
+          description: Whether or not the deployment is enabled. Default is true if not specified.
+        discover:
+          type: boolean
+          default: true
+          description: Whether or not the deployment is discovered. Default is true if not specified.
+        scan:
+          type: boolean
+          default: true
+          example: true
+          description: Whether or not the deployment is scanned. Default is true if not specified.
+        scope:
+          $ref: '#/components/schemas/DeploymentScopeInfo'
+        cloud_defender:
+          type: object
+          description: The Cloud Defender product integration settings
+          properties:
+            enabled:
+              type: boolean
+              default: 'False'
+              description: 'Whether or not the Cloud Defender product integration is enabled, must be false'
+            location_id:
+              type: string
+              description: "The Cloud Defender datacenter location name, default location_id will be set to account's default defender location_id."
+        credentials:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeploymentCredentialInfo'
+      required:
+        - name
+    AWSMonitorInfo:
+      title: MonitorInfo
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        ct_install_region:
+          type: string
+      required:
+        - enabled
+        - ct_install_region
+    AWSDeploymentPlatformInfo:
+      title: AWSDeploymentPlatformInfo
+      type: object
+      description: "The 'aws' deployment platform specific settings"
+      properties:
+        type:
+          type: string
+          enum:
+            - aws
+          minLength: 3
+          maxLength: 3
+          pattern: aws
+        id:
+          type: string
+          description: "\t\nAWS account identifier, see http://docs.aws.amazon.com/general/latest/gr/acct-identifiers.html"
+        monitor:
+          type: object
+          description: The deployment monitoring configuration
+          properties:
+            enabled:
+              type: boolean
+              description: The flag to indicate whether the monitoring of the deployment is enabled Default is false if not specified.
+            ct_install_region:
+              type: string
+              description: 'The AWS region to install CloudTrail in; Required if platform.monitor.enabled == true, Invalid otherwise'
+      required:
+        - type
+    DeploymentScopeInfo:
+      title: DeploymentScopeInfo
+      type: object
+      description: "Definition of customer's assets being protected"
+      properties:
+        include:
+          type: array
+          items:
+            type: object
+            description: List of assets being protected
+            properties:
+              type:
+                type: string
+                enum:
+                  - deployment
+                  - region
+                  - vpc
+                description: 'Asset type. Allowed asset types: deployment, region, vpc.'
+              key:
+                type: string
+                description: Asset Key
+              policy:
+                type: object
+                description: Details of the attached policy
+                properties:
+                  id:
+                    type: string
+                    description: gen v4 UUID of the attached policy
+        exclude:
+          type: array
+          description: List of assets excluded from protection
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                description: 'Asset type. Allowed asset types: region, vpc, subnet.'
+                enum:
+                  - region
+                  - vpc
+                  - subnet
+              key:
+                type: string
+                description: Asset Key
+    AzureDeploymentPlatformInfo:
+      title: AzureDeploymentPlatformInfo
+      type: object
+      properties:
+        type:
+          type: string
+          description: 'The type of deployment, must be azure'
+          enum:
+            - azure
+          pattern: azure
+        id:
+          type: string
+          description: Azure subscription identifier
+      description: "The 'azure' deployment platform specific settings"
+    DatacenterDeploymentPlatformInfo:
+      title: DatacenterDeploymentPlatformInfo
+      type: object
+      properties:
+        type:
+          type: string
+          description: "\t\nThe type of deployment, must be datacenter"
+          enum:
+            - datacenter
+          example: datacenter
+        default:
+          type: boolean
+          default: 'False'
+          description: This flag determines which datacenter deployment will be used by DC Explorer. Default is false if not specified.
+      description: "The 'datacenter' deployment platform specific settings"
+    DeploymentCredentialInfo:
+      title: DeploymentCredentialInfo
+      type: object
+      properties:
+        id:
+          type: string
+          description: gen v4 UUID of the linked credential object
+          format: uuid
+        purpose:
+          type: string
+          description: |-
+            The purpose of the linked credential object.
+            For 'aws' deployments: 'discover' and 'x-account-monitor' values are allowed.
+            For 'azure' deployments: only discover is allowed
+            For 'datacenter' deployments this is not valid
+        version:
+          type: string
+          description: Credential validation policy version in YYYY-MM-DD format
+          format: date
+      required:
+        - id
+        - purpose
+    Deployment:
+      title: Deployment
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+        name:
+          type: string
+        platform:
+          oneOf:
+            - $ref: '#/components/schemas/AWSDeploymentPlatformInfo'
+            - $ref: '#/components/schemas/AzureDeploymentPlatformInfo'
+            - $ref: '#/components/schemas/DatacenterDeploymentPlatformInfo'
+        mode:
+          type: string
+          enum:
+            - manual
+            - readonly
+            - automatic
+            - guided
+            - none
+        enabled:
+          type: boolean
+        discover:
+          type: boolean
+        scan:
+          type: boolean
+        scope:
+          $ref: '#/components/schemas/DeploymentScopeInfo'
+        cloud_defender:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+            location:
+              type: string
+        credentials:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeploymentCredentialInfo'
+        status:
+          type: object
+          properties:
+            status:
+              type: string
+            updated:
+              type: number
+        created:
+          type: object
+          properties:
+            at:
+              type: number
+            by:
+              type: string
+              format: uuid
+        modified:
+          type: object
+          properties:
+            at:
+              type: number
+            by:
+              type: string
+              format: uuid
+        version:
+          type: number
+      description: Deployment Object
+  securitySchemes:
+    X-AIMS-Auth-Token:
+      name: X-AIMS-Auth-Token
+      type: apiKey
+      in: header
+      description: AIMS Authentication Token
+

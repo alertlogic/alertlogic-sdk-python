@@ -1,0 +1,222 @@
+openapi: 3.0.2
+info:
+  title: aefr.v1.yaml
+  version: '1.0'
+  contact:
+    email: support@alertlogic.com
+  description: Analytics Engine Filter Router Service API
+servers:
+  - url: 'https://api.global-integration.us-west-2.product.dev.alertlogic.com'
+    description: integration
+    x-alertlogic-session-endpoint: false
+paths:
+  '/aefr/v1/{account_id}/triggers/datatypes/{data_type}':
+    get:
+      summary: Get Triggers by Data Type
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: {}
+      operationId: list_triggers_by_datatype
+      description: 'Return a map of trigger rules. Important: Instead of a 404, this endpoint return an empty JSON document (i.e., {})'
+      security:
+        - X-AIMS-Auth-Token: []
+      parameters:
+        - schema:
+            type: integer
+          in: query
+          name: epoch
+          description: A positive integer representing an epoch
+        - schema:
+            type: integer
+          in: query
+          name: ts
+          description: A unix epoch timestamp
+        - schema:
+            type: boolean
+          in: query
+          name: include_parents
+          description: Include parent account analytics applied to this account as well
+      tags:
+        - Trigger Resources
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+          enum:
+            - logmsgs
+            - observation
+            - telemetry
+        name: data_type
+        in: path
+        required: true
+        description: 'One of the data types supported by ingestion (for example logmsgs, telemetry, etc)'
+  '/aefr/v1/triggers/datatypes/{data_type}':
+    get:
+      summary: List Global Triggers
+      tags:
+        - Trigger Resources
+      responses:
+        '200':
+          description: OK
+      operationId: list_global_triggers
+      security:
+        - X-AIMS-Auth-Token: []
+      description: Returns a list of triggers defined at the global level
+    parameters:
+      - schema:
+          type: string
+          enum:
+            - logmsgs
+            - observations
+        name: data_type
+        in: path
+        required: true
+  '/aefr/v1//triggers/paths/{path}':
+    get:
+      summary: Get Trigger by Path
+      tags:
+        - Trigger Resources
+      responses:
+        '200':
+          description: OK
+      operationId: get_global_trigger_by_path
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: path
+        in: path
+        required: true
+  '/aefr/v1/triggers/ids/{trigger_id}':
+    get:
+      summary: Get Trigger by ID
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trigger'
+      operationId: get_trigger_by_id
+      security:
+        - X-AIMS-Auth-Token: []
+      description: ''
+    parameters:
+      - schema:
+          type: string
+        name: trigger_id
+        in: path
+        required: true
+  '/aefr/v1/{account_id}/triggers':
+    get:
+      summary: Get triggers
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: {}
+      operationId: list_triggers
+      description: 'Return a map of trigger rules. Important: Instead of a 404, this endpoint return an empty JSON document (i.e., {})'
+      security:
+        - X-AIMS-Auth-Token: []
+      parameters:
+        - schema:
+            type: boolean
+          in: query
+          name: include_parents
+          description: Include triggers applied from parent account rules
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+  '/aefr/v1/{account_id}/triggers/paths/{path}':
+    get:
+      summary: Get Trigger for a specific customer
+      tags: []
+      responses: {}
+      operationId: get_trigger_by_path
+      description: Returns trigger definition for specific customer
+      security:
+        - X-AIMS-Auth-Token: []
+      parameters:
+        - schema:
+            type: boolean
+            default: 'true'
+            enum:
+              - 'true'
+              - 'false'
+          in: query
+          name: include_parents
+          description: Return triggers applied to this customer from the parent level
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+        name: path
+        in: path
+        required: true
+        description: Trigger Path
+components:
+  schemas:
+    Trigger:
+      title: Trigger
+      type: object
+      properties:
+        sql:
+          type: string
+        path:
+          type: string
+        observation:
+          $ref: '#/components/schemas/Observation'
+    Observation:
+      title: Observation
+      type: object
+      properties:
+        scope:
+          type: string
+        properties:
+          type: object
+          properties:
+            ids:
+              type: string
+        keys:
+          type: object
+          properties:
+            event:
+              type: string
+        generate:
+          type: string
+  securitySchemes:
+    X-AIMS-Auth-Token:
+      name: X-AIMS-Auth-Token
+      type: apiKey
+      in: header
+      description: AIMS Authentication Token
+tags:
+  - name: Trigger Resources
+    description: Analytics Engine Trigger Resources Manupulation
+
