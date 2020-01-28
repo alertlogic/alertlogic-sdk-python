@@ -11,6 +11,7 @@ import almdrlib
 import logging
 from almdrlib.config import Config
 from almdrlib.region import Region
+from almdrlib.client import Client
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,8 @@ class Session():
         self._config = Config(access_key_id=access_key_id, secret_key=secret_key, account_id=account_id,
                                 profile=profile, global_endpoint=global_endpoint, residency=residency)
 
+        self._token = None
+        self._defaults = None
         self._account_id = self._config.account_id
         self._residency = self._config.residency
         self._global_endpoint = self._config.global_endpoint
@@ -54,7 +57,6 @@ class Session():
             self._token = aims_token
         else:
             self._access_key_id, self._secret_key = self._config.get_auth()
-            self._authenticate()
 
     def _set_credentials(self, access_key_id, secret_key, aims_token):
         self._access_key_id = access_key_id
@@ -67,6 +69,7 @@ class Session():
         more info:
         https://console.cloudinsight.alertlogic.com/api/aims/#api-AIMS_Authentication_and_Authorization_Resources-Authenticate
         """
+        logger.info(f"Authenticating '{self._access_key_id}' user against '{self._global_endpoint_url}' endpoint.")
         try:
             auth = requests.auth.HTTPBasicAuth(self._access_key_id, self._secret_key)
             response = requests.post(self._global_endpoint_url + "/aims/v1/authenticate", auth=auth)
@@ -94,11 +97,13 @@ class Session():
         """
         requests lib auth module callback
         """
+        if self._token is None:
+            self._authenticate()
         r.headers["x-aims-auth-token"] = self._token
         return r
 
     def client(self, service_name, version=None, *args, **kwargs):
-        return almdrlib.create_client(service_name=service_name, version=version, session=self, *args, **kwargs)
+        return Client(service_name, session=self, version=version, *args, **kwargs)
 
     def get_url(self, service_name, account_id = None):
         try:
@@ -122,10 +127,11 @@ class Session():
         logger.debug(f"'{method}' method for URL: '{url}' returned '{response.status_code}' status code")
         return response
 
-    def get_defaults(self):
-        return {
-            "account_id": self.account_id
-        }
+    def get_default(self, name):
+        if name == 'account_id':
+            return self.account_id
+
+        return None
 
     @staticmethod
     def list_services():
@@ -138,13 +144,12 @@ class Session():
         operations = {}
         for op_name, operation in client.operations.items():
             operations[op_name] = operation.get_schema()
-            #'operations': [operation.get_schema() for operation in client.operations.values()]
-        model.update({'operations': operations})
-        return model
-
+        return model.update({'operations': operations})
 
     @property
     def account_id(self):
+        if self._account_id is None:
+            self._authenticate()
         return self._account_id
 
     @property

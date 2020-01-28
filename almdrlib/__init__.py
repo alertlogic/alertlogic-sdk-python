@@ -8,7 +8,9 @@ class NoValue(Enum):
      def __repr__(self):
          return '<%s.%s>' % (self.__class__.__name__, self.name)
 
-from almdrlib.client import Client
+from almdrlib.session import Session
+
+IWS_DEFAULT_SESSION = None
 
 def set_logger(name='almdrlib', level=logging.DEBUG, format_string=None):
     """
@@ -38,9 +40,16 @@ def set_logger(name='almdrlib', level=logging.DEBUG, format_string=None):
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
-def create_client(service_name, version = None, session = None, *args, **kwargs):
-    return Client(service_name, version, session, *args, **kwargs)
+def _get_default_session():
+    global IWS_DEFAULT_SESSION
+    if not IWS_DEFAULT_SESSION:
+        IWS_DEFAULT_SESSION = Session()
+    return IWS_DEFAULT_SESSION
 
+def client(service_name, version = None, session = None, *args, **kwargs):
+    if session is None:
+        session = _get_default_session()
+    return session.client(service_name, version, *args, **kwargs)
 
 # Logging to dev/null
 # http://docs.python.org/3.3/howto/logging.html#configuring-logging-for-a-library

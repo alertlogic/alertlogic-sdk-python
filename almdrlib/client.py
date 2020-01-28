@@ -103,42 +103,15 @@ class Server(object):
         self._url = url
 
 class RequestBody(object):
-    def __init__(self, content_type, schema, required):
-        #data_type = model.get(OpenAPIKeyWord.TYPE)
-        #if not data_type:
-        #    raise ValueError(f"'{OpenAPIKeyWord.TYPE}' is a missing")
-
-        #self._x_request_body = x_request_body
-        #if data_type == OpenAPIKeyWord.OBJECT:
-        #    self._required = model.pop(OpenAPIKeyWord.REQUIRED, [])
-        #    self._properties = model.pop(OpenAPIKeyWord.PROPERTIES)
-        #    self._type = OpenAPIKeyWord.OBJECT
-        #else:
-        #    raise ValueError(f"'{data_type}' is not a supported model type")
-        
+    def __init__(self, content_type, schema, required, session=None):
         self._content_type = content_type
         self._schema = schema
         self._required = required
+        self._session = session
 
     def serialize(self, headers, kwargs):
-
         body = {}
-        #if self._type == OpenAPIKeyWord.OBJECT:
-        #    if self._x_request_body:
-        #        param_name = self._x_request_body.get(OpenAPIKeyWord.NAME)
-        #        if param_name not in kwargs and len(self._required):
-        #            raise ValueError(f"'{name}' is required")
-        #        body = kwargs.get(param_name)
-        #        if not all(name in body for name in self._required):
-        #            raise ValueError(f"'{self._required}' are required in '{param_name}'")
-        #    else:
-        #        if not all(name in kwargs for name in self._required):
-        #            raise ValueError(f"'{self._required}' are required'")
-        #        for property_name, property_type in self._properties.items():
-        #            if property_name not in kwargs: continue
-        #            body[property_name] = kwargs.pop(property_name)
 
-        print(f"Serialize called: Schema: {self._schema}") 
         if not all(name in kwargs for name in self._required):
             raise ValueError(f"'{self._required}' are required'")
         for property_name in self._schema.get(OpenAPIKeyWord.PROPERTIES, {}).keys():
@@ -153,15 +126,16 @@ class RequestBody(object):
         return self._schema 
 
 class PathParameter(object):
-    def __init__(self, spec = {}, defaults=None):
+    def __init__(self, spec = {}, session = None):
         # TODO: Rework PathParameter to work based on the saved spec
         self._in = spec[OpenAPIKeyWord.IN]
         self._name = spec[OpenAPIKeyWord.NAME]
         self._required = spec.get(OpenAPIKeyWord.REQUIRED, False)
-        self._default = defaults and defaults.get(self._name)
         self._description = spec.get(OpenAPIKeyWord.DESCRIPTION, "")
         self._dataype = get_dict_value(spec, [OpenAPIKeyWord.SCHEMA, OpenAPIKeyWord.TYPE], OpenAPIKeyWord.STRING)
         self._spec = spec
+        self._session = session
+        self._default = None
 
     @property
     def name(self):
@@ -181,6 +155,8 @@ class PathParameter(object):
 
     @property
     def default(self):
+        if self._default is None:
+            self._default = self._session.get_default(self._name)
         return self._default
 
     @property
@@ -197,12 +173,11 @@ class PathParameter(object):
         return result
 
     def serialize(self, path_params, query_params, headers, cookies, kwargs):
-        if self._default: value = self._default
-        if self._name not in kwargs and not self._default:
+        if self._name not in kwargs and not self.default:
             if self._required:
                 raise ValueError(f"'{self._name}' is required")
             return
-        value = serialize_value(self._dataype, kwargs.pop(self._name, self._default))
+        value = serialize_value(self._dataype, kwargs.pop(self._name, self.default))
         if self._in == OpenAPIKeyWord.PATH:
             path_params[self._name] = value
         elif self._in == OpenAPIKeyWord.QUERY:
@@ -229,7 +204,6 @@ class Operation(object):
         self._body = body
         self._session = session
         self._server = server
-        #self._defaults = session and session.get_defaults() or {}
 
     @property
     def spec(self):
@@ -267,7 +241,7 @@ class Operation(object):
         for param in self.params:
             params_schema.update({param.name: param.schema})
         if self.body:
-            params_schema.update(self.body.schema.get(OpenAPIKeyWord.PROPERTIES))
+            params_schema.update(self.body.schema.get(OpenAPIKeyWord.PROPERTIES, {}))
 
         return {
             OpenAPIKeyWord.OPERATION_ID: self.operation_id,
@@ -280,7 +254,6 @@ class Operation(object):
         if not body_spec:
             return
 
-        # TODO: If requestBody has a non-refed object, use it's properties and ignore OpenAPIKeyWord.REQUEST_BODY_NAME
         name = body_spec.get(OpenAPIKeyWord.REQUEST_BODY_NAME, OpenAPIKeyWord.REQUEST_BODY)
 
         content = body_spec.get(OpenAPIKeyWord.CONTENT)
@@ -354,7 +327,6 @@ class Client(object):
         self._spec = {}
         self._models = {}
         self._info = {}
-        self._defaults = session and session.get_defaults() or {}
         self.load_service_spec(name, version, variables)
 
     def load_service_spec(self, service_name, version=None, variables=None):
@@ -448,7 +420,7 @@ class Client(object):
             params = [
                 PathParameter(
                     spec = param_spec,
-                    defaults = self._defaults
+                    session = self._session
                 )
                 for param_spec in path_spec.pop(OpenAPIKeyWord.PARAMETERS, [])
             ]
@@ -467,7 +439,7 @@ class Client(object):
                 params.extend([
                     PathParameter(
                         spec = param_spec,
-                        defaults = self._defaults
+                        session = self._session
                     )
                     for param_spec in op_spec.get(OpenAPIKeyWord.PARAMETERS, [])
                 ])
@@ -522,7 +494,7 @@ class Client(object):
 
         required_properties = schema.get(OpenAPIKeyWord.REQUIRED, [])
 
-        return RequestBody(content_type, body_schema, required_properties)
+        return RequestBody(content_type, body_schema, required_properties, session=self._session)
 
     def _get_object_schema(self, schema, property_name=None):
         '''
