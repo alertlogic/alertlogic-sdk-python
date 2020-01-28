@@ -9,7 +9,7 @@ with open('almdrlib/__init__.py', 'rb') as f:
         f.read().decode('utf-8')).group(1)))
 
 setup(
-    name='alerltlogic-sdk-python',
+    name='alertlogic-sdk-python',
     version=version,
     url='https://github.com/alertlogic/alertlogic-sdk-python',
     license='MIT',
@@ -35,5 +35,5 @@ setup(
             'pycodestyle>=2.3.1'
         ],
     },
-    keywords=['alerltlogic-sdk', 'alertlogic-sdk-python', 'alerltlogic-mdr-sdk', 'almdrlib', 'alertlogic']
+    keywords=['alertlogic-sdk', 'alertlogic-sdk-python', 'alertlogic-mdr-sdk', 'almdrlib', 'alertlogic']
 )
