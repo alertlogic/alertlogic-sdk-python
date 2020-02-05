@@ -16,6 +16,10 @@ ENDPOINTS = {
 }
 
 class Residency(NoValue):
+    @staticmethod
+    def list_residencies():
+        return ['default', 'us', 'emea']
+
     DEFAULT = 'default'
     US = 'us'
     EMEA = 'emea'
@@ -30,6 +34,10 @@ class Region():
     """
     def __init__(self):
         pass
+
+    @staticmethod
+    def list_endpoints():
+        return ENDPOINTS.keys()
 
     @staticmethod
     def get_global_endpoint(endpoint):
