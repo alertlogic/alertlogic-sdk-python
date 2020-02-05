@@ -103,7 +103,8 @@ class Session():
         return r
 
     def client(self, service_name, version=None, *args, **kwargs):
-        return Client(service_name, session=self, version=version, *args, **kwargs)
+        self.__init__(*args, **kwargs)
+        return Client(service_name, session=self, version=version)
 
     def get_url(self, service_name, account_id = None):
         try:
@@ -144,7 +145,8 @@ class Session():
         operations = {}
         for op_name, operation in client.operations.items():
             operations[op_name] = operation.get_schema()
-        return model.update({'operations': operations})
+        model.update({'operations': operations})
+        return model
 
     @property
     def account_id(self):

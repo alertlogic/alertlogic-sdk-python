@@ -576,8 +576,7 @@ class Client(object):
 def load_spec_from_file(file_path):
     with open(file_path) as f:
         s = f.read()
-    return yaml.load(s, Loader=yaml.Loader)
-
+    return yaml.load(s, Loader=yaml.SafeLoader)
 
 def get_dict_value(dict, list, default=None):
     length = len(list)
