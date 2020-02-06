@@ -4,7 +4,7 @@ info:
   version: '1.0'
   description: Analytics Engine Tuning Service
 servers:
-  - url: 'https://t0m8wscahi.execute-api.us-east-1.amazonaws.com/{basePath}'
+  - url: 'https://1llqzoz9s4.execute-api.us-east-1.amazonaws.com/{basePath}'
     variables:
       basePath:
         default: Integration
