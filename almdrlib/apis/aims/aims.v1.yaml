@@ -6,6 +6,8 @@ info:
   contact:
     email: support@alertlogic.com
     name: Alert Logic Support
+  x-alertlogic-iws-service:
+    type: public
 servers:
   - url: 'https://api.global-services.global.alertlogic.com'
     description: production
@@ -39,18 +41,21 @@ paths:
       security:
         - X-AIMS-Auth-Token: []
       x-code-samples:
-        - lang: Curl
+        - lang: Request Sample
           source: |
             curl -X GET "https://api.global-services.global.alertlogic.com/aims/v1/12345678/account"
         - lang: Python
           source: |
-            import almdrlib 
+            import almdrlib
             from almdrlib.session import Session
 
             session = Session(access_key_id="mykey", secret_key="mysecret")
             aims = session.client("aims")
             res = aims.get_account_details(account_id = "111111111")
             print(res.json())
+        - lang: alcli
+          source: |
+            $alcli aims get_account_details --account_id 111111111
     parameters:
       - schema:
           type: string
@@ -707,14 +712,13 @@ paths:
                   permissions:
                     '*:own:*:*': allowed
                     'aims:own:grant:*': allowed
-      x-code-samples:
-        - lang: "Request Sample"
-          source: |
-              curl -X POST -d '{"name": "Super Mega Power User", "permissions": {"*:own:*:*": "allowed", "aims:own:grant:*":"allowed"}}' "https://api.cloudinsight.alertlogic.com/aims/v1/12345678/roles"
-
       tags:
         - AIMS Role Resources
       description: Create a role
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X POST -d '{"name": "Super Mega Power User", "permissions": {"*:own:*:*": "allowed", "aims:own:grant:*":"allowed"}}' "https://api.global-services.global.alertlogic.com/aims/v1/12345678/roles"
     parameters:
       - schema:
           type: string
@@ -871,8 +875,10 @@ paths:
               properties:
                 name:
                   type: string
+                  description: Role Name
                 permissions:
                   type: object
+                  description: Role Permissions
             examples:
               Update Role Details Request Example:
                 value:
@@ -2285,8 +2291,10 @@ components:
       properties:
         id:
           type: string
+          description: Account ID
         name:
           type: string
+          description: Account Name
         active:
           type: boolean
         version:
@@ -2311,6 +2319,9 @@ components:
               type: number
             by:
               type: string
+      required:
+        - id
+        - name
     User:
       title: User
       type: object
