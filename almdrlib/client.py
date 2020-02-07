@@ -59,6 +59,8 @@ class OpenAPIKeyWord:
     REQUIRED = "required"
     CONTENT = "content"
     DEFAULT = "default"
+    CONTENT_TYPE_JSON = "application/json"
+    CONTENT_TYPE_TEXT = "text/plain"
 
     SIMPLE_DATA_TYPES = [STRING, ARRAY, BOOLEAN, INTEGER, NUMBER]
     DATA_TYPES = [STRING, OBJECT, ARRAY, BOOLEAN, INTEGER, NUMBER]
@@ -119,7 +121,10 @@ class RequestBody(object):
             body[property_name] = kwargs.pop(property_name)
 
         headers['Content-Type'] = self._content_type 
-        kwargs['data'] = json.dumps(body) 
+        if self._content_type == OpenAPIKeyWord.CONTENT_TYPE_JSON:
+            kwargs['data'] = json.dumps(body) 
+        elif self._content_type == OpenAPIKeyWord.CONTENT_TYPE_TEXT:
+            kwargs['data'] = next(iter(body.values()))
 
     @property
     def schema(self):
@@ -484,19 +489,24 @@ class Client(object):
         
         content = body_spec.pop(OpenAPIKeyWord.CONTENT, {})
         content_type, schema_spec = content.popitem()
+        description = body_spec.pop(OpenAPIKeyWord.DESCRIPTION, None)
         
         schema = schema_spec.pop(OpenAPIKeyWord.SCHEMA)
         al_schema = schema.pop(OpenAPIKeyWord.X_ALERTLOGIC_SCHEMA, {})
+        al_property_name = al_schema.get(OpenAPIKeyWord.NAME)
 
         body_schema = self._get_object_schema(
                 schema, 
-                property_name=al_schema.get(OpenAPIKeyWord.NAME))
+                property_name=al_property_name,
+                description=description)
 
         required_properties = schema.get(OpenAPIKeyWord.REQUIRED, [])
+        if al_property_name:
+            required_properties.append(al_property_name)
 
         return RequestBody(content_type, body_schema, required_properties, session=self._session)
 
-    def _get_object_schema(self, schema, property_name=None):
+    def _get_object_schema(self, schema, property_name=None, description=None):
         '''
             Get Object's schema. If ref is present, resolve it.
         '''
@@ -511,11 +521,22 @@ class Client(object):
                 
             return {
                         OpenAPIKeyWord.PROPERTIES: {
-                            property_name: self._get_object_schema(model)
+                            property_name: self._get_object_schema(model, property_name, description)
                     }
                 }
-        elif schema.get(OpenAPIKeyWord.TYPE) != OpenAPIKeyWord.OBJECT:
-            raise ValueError(f"'{schema}' is unsupported.")
+        else:
+            datatype = schema.get(OpenAPIKeyWord.TYPE)
+            if datatype in OpenAPIKeyWord.DATA_TYPES:
+                return {
+                        OpenAPIKeyWord.PROPERTIES: {
+                            property_name or 'data': {
+                                OpenAPIKeyWord.TYPE: datatype,
+                                OpenAPIKeyWord.DESCRIPTION: description
+                            }
+                        }
+                    }
+            elif datatype != OpenAPIKeyWord.OBJECT:
+                raise ValueError(f"'{schema}' is unsupported.")
 
         result = {}
         required = []

@@ -6,3 +6,8 @@ History
 ------------------
 
 * First release on PyPI.
+
+1.0.4 (2020-02-07)
+------------------
+
+* Introduce Search API support (beta)
