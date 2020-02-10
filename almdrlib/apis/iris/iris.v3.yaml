@@ -156,6 +156,494 @@ paths:
         '404':
           description: Not found
 
-  '/iris/v3/':
+  '/iris/v3/incident_filters':
+    get:
+      summary: Get the fields and values used to filter incidents
+      tags: []
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X GET https://api.cloudinsight.alertlogic.com/iris/v3/incident_filters
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Invalid arguments
+        '401':
+          description: Unauthorised
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
 
-  '/iris/v3/':
+  '/iris/v3/{account_id}/recent_escalations/{start_time}/{end_time}':
+    get:
+      summary: Get the most recent escalated incidents for a specific customer
+      tags: []
+      parameters:
+        - schema:
+            type: string
+          name: account_id
+          in: path
+          required: true
+          description: Customer account ID
+        - schema:
+            type:
+
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X GET https://api.cloudinsight.alertlogic.com/iris/v3/1234/recent_escalations/2019-11-25T14:35/2019-11-25T14:3
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Invalid arguments
+        '401':
+          description: Unauthorised
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+
+  '/iris/v3/partner_api/{start_time}/{end_time}':
+    get:
+      summary: Get the incidents for a time range you have access to
+      tags: []
+      parameters:
+        - schema:
+
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X GET https://api.cloudinsight.alertlogic.com/iris/v3/partner_api/2019-02-01T12:00/2019-02-01T16:00
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Invalid arguments
+        '401':
+          description: Unauthorised
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+
+  '/iris/v3/{account_id}/{incident_id}/history':
+    get:
+      summary: Get the history for a specific incident
+      tags: []
+      parameters:
+        - schema:
+            type: string
+          name: account_id
+          in: path
+          required: true
+          description: Customer account ID
+        - schema:
+            type: string
+            name: incident_id
+            in: path
+            required: true
+            description: Incident ID
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X https://api.cloudinsight.alertlogic.com/iris/v3/1234/1ab29e36-394e-11e9-a004-720004270420/history
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Invalid arguments
+        '401':
+          description: Unauthorised
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+
+  '/iris/v3/{account_id}/{incident_id}/snooze':
+    post:
+      summary: Snooze an incident for a period of time
+      tags: []
+      parameters:
+        - schema:
+            type: string
+          name: account_id
+          in: path
+          required: true
+          description: Customer account ID
+        - schema:
+            type: string
+            name: incident_id
+            in: path
+            required: true
+            description: Incident ID
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X POST https://api.cloudinsight.alertlogic.com/iris/v3/1234/1ab29e36-394e-11e9-a004-720004270420/snooze -d '{"period_ms": 1, "reason_code": "tomorrow", "notes": "Snoozed until Bob fixes this"}'
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Invalid arguments
+        '401':
+          description: Unauthorised
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+
+  '/iris/v3/{account_id}/{incident_id}/complete':
+    post:
+      summary: Close/complete an incident
+      tags: []
+      parameters:
+        - schema:
+            type: string
+          name: account_id
+          in: path
+          required: true
+          description: Customer account ID
+        - schema:
+            type: string
+            name: incident_id
+            in: path
+            required: true
+            description: Incident ID
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X POST https://api.cloudinsight.alertlogic.com/iris/v3/1234/1ab29e36-394e-11e9-a004-720004270420/complete -d '{"reason_code": "further_action", "notes": "We are done with this"}'
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Invalid arguments
+        '401':
+          description: Unauthorised
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+
+  '/iris/v3/{account_id}/{incident_id}/feedback':
+    post:
+      summary: Update incident feedback
+      tags: []
+      parameters:
+        - schema:
+            type: string
+          name: account_id
+          in: path
+          required: true
+          description: Customer account ID
+        - schema:
+            type: string
+            name: incident_id
+            in: path
+            required: true
+            description: Incident ID
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X POST https://api.cloudinsight.alertlogic.com/iris/v3/19651/1ab29e36-394e-11e9-a004-720004270420/feedback -d \
+                              '{"operation": "open", "reason_code": "further_action", "notes": "whatever customer thinks is useful!"}'
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Invalid arguments
+        '401':
+          description: Unauthorised
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+
+  '/iris/v3/{account_id}/{incident_id}/assets':
+    get:
+      summary: Get the asset elaborations for a specific incident
+      tags: []
+      parameters:
+        - schema:
+            type: string
+          name: account_id
+          in: path
+          required: true
+          description: Customer account ID
+        - schema:
+            type: string
+            name: incident_id
+            in: path
+            required: true
+            description: Incident ID
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X GET https://api.cloudinsight.alertlogic.com/iris/v3/19651/1ab29e36-394e-11e9-a004-720004270420/assets
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Invalid arguments
+        '401':
+          description: Unauthorised
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+
+  '/iris/v3/{account_id}/batch/snooze':
+    post:
+      summary: Snooze a list of incidents for a period of time
+      tags: []
+      parameters:
+        - schema:
+            type: string
+          name: account_id
+          in: path
+          required: true
+          description: Customer account ID
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X POST https://api.cloudinsight.alertlogic.com/iris/v3/19651/batch/snooze -d '{"period_ms": 1, "reason_code": "tomorrow", "notes": "Snoozed until Bob fixes this", "incidents": ["e811af1c88c16a4f"]}'
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Invalid arguments
+        '401':
+          description: Unauthorised
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+
+  '/iris/v3/{account_id}/batch/complete':
+    post:
+      summary: Close/complete a list of incidents
+      tags: []
+      parameters:
+        - schema:
+            type: string
+          name: account_id
+          in: path
+          required: true
+          description: Customer account ID
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X POST https://api.cloudinsight.alertlogic.com/iris/v3/19651/batch/complete -d \
+                             '{ "operation": "open", "reason_code": "further_action", "notes": "whatever customer thinks is useful!", "incidents": ["e811af1c88c16a4f"] }'
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Invalid arguments
+        '401':
+          description: Unauthorised
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+
+  '/iris/v3/{account_id}/batch/feedback':
+    post:
+      summary: Update incident feedback on a list of incidents
+      tags: []
+      parameters:
+        - schema:
+            type: string
+          name: account_id
+          in: path
+          required: true
+          description: Customer account ID
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X POST https://api.cloudinsight.alertlogic.com/iris/v3/19651/batch/feedback -d \
+                             '{ "operation": "open", "reason_code": "further_action", "notes": "whatever customer thinks is useful!",
+                              "incidents": ["e811af1c88c16a4f"] }'
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Invalid arguments
+        '401':
+          description: Unauthorised
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+
+  '/iris/v3/{account_id}/batch/undo':
+    post:
+      summary: Undo cached actions on list of incidents
+      tags: []
+      parameters:
+        - schema:
+            type: string
+          name: account_id
+          in: path
+          required: true
+          description: Customer account ID
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X POST https://api.cloudinsight.alertlogic.com/iris/v3/:account_id/batch/undo -d
+                                 '{"performed_by":"John Diaz <jdiaz@alertlogic.com>", "total_updated":1, "update_time":1537804956.345696,
+                                  "updates":{ "e81109b776a84ec9":{ "account_id":134232303, "change":{ "new":{ "expiration":1537909356.345745,
+                                  "expiration_str":"2018-09-25T21:02:36.345745+00:00", "notes":"Does this work again, testing undo 3!",
+                                  "period_ms":86400000, "reactivates_at":"2018-09-25 16:02:36.345745", "reason_code":"next_week",
+                                  "snooze_by":"John Diaz <jdiaz@alertlogic.com>", "snoozed":true }, "old":{ "expiration":1537909172.469218,
+                                  "expiration_str":"2018-09-25T20:59:32.469218+00:00", "notes":"Does this work again, testing undo 3!",
+                                  "period_ms":86400000, "reactivates_at":"2018-09-25 15:59:32.469218", "reason_code":"next_week",
+                                  "snooze_by":"John Diaz <jdiaz@alertlogic.com>", "snoozed":true } }, "message":"Updated: snooze_status",
+                                  "property":"snooze_status"}}}'
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Invalid arguments
+        '401':
+          description: Unauthorised
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+
+  '/iris/v3/{account_id}/correlation_count/{correlation_id}':
+    get:
+      summary: Get a count of open log correlation incidents by ID for a customer
+      tags: []
+      parameters:
+        - schema:
+            type: string
+          name: account_id
+          in: path
+          required: true
+          description: Customer account ID
+        - schema:
+            type: string
+            name: correlation_id
+            in: path
+            required: true
+            description: Unique ID for a correlation rule
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X GET https://api.cloudinsight.alertlogic.com/iris/v3/134264762/correlation_count/2CC2EB65-4EAC-4503-AE4F-7FE90DF85037
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Invalid arguments
+        '401':
+          description: Unauthorised
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+
+  '/iris/v3/incidents/dsl-translate':
+    post:
+      summary: Translate a list of query string filters into al_query
+      tags: []
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X POST https://api.cloudinsight.alertlogic.com/iris/v3/incidents/dsl-translate -d \
+                     '{"query_string": ["LIKE(Unauthorized),incident.threatRating>High"]}'
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Invalid arguments
+        '401':
+          description: Unauthorised
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+
+  '/iris/v3/{account_id}/incident/aggregations':
+    post:
+      summary: Get aggregrations for a list of fields
+      tags: []
+      parameters:
+        - schema:
+            type: string
+          name: account_id
+          in: path
+          required: true
+          description: Customer account ID
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X POST https://api.cloudinsight.alertlogic.com/iris/v3/1234/incident/aggregations
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Invalid arguments
+        '401':
+          description: Unauthorised
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+
+  '/iris/v3/metadata-constants':
+    get:
+      summary: Get all IRIS metadata constants
+      tags: []
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X GET https://api.cloudinsight.alertlogic.com/iris/v3/metadata-constants
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Invalid arguments
+        '401':
+          description: Unauthorised
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
