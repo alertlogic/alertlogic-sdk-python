@@ -26,7 +26,7 @@ paths:
         content:
           application/json:
             schema:
-              type: json
+              type: object
               x-alertlogic-schema:
                 name: observation
         description: The observation to create an incident from
@@ -118,6 +118,10 @@ paths:
       responses:
         '200':
           description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IDAndAccount'
         '400':
           description: Invalid arguments
         '401':
@@ -147,6 +151,10 @@ paths:
       responses:
         '200':
           description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IDAndAccount'
         '400':
           description: Invalid arguments
         '401':
@@ -169,6 +177,10 @@ paths:
       responses:
         '200':
           description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentFilters'
         '400':
           description: Invalid arguments
         '401':
@@ -190,7 +202,11 @@ paths:
           required: true
           description: Customer account ID
         - schema:
-            type:
+            type: string
+          name: start_time
+        - schema:
+            type: string
+          name: end_time
 
       security:
         - X-AIMS-Auth-Token: []
@@ -201,6 +217,10 @@ paths:
       responses:
         '200':
           description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecentEscalations'
         '400':
           description: Invalid arguments
         '401':
@@ -215,8 +235,6 @@ paths:
       summary: Get the incidents for a time range you have access to
       tags: []
       parameters:
-        - schema:
-
       security:
         - X-AIMS-Auth-Token: []
       x-code-samples:
@@ -226,6 +244,10 @@ paths:
       responses:
         '200':
           description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerAPI'
         '400':
           description: Invalid arguments
         '401':
@@ -261,6 +283,10 @@ paths:
       responses:
         '200':
           description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentHistory'
         '400':
           description: Invalid arguments
         '401':
@@ -287,6 +313,14 @@ paths:
             in: path
             required: true
             description: Incident ID
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+                properties:
+
+        description: The SQL statement to execute
       security:
         - X-AIMS-Auth-Token: []
       x-code-samples:
@@ -296,6 +330,10 @@ paths:
       responses:
         '200':
           description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentSnooze'
         '400':
           description: Invalid arguments
         '401':
@@ -331,6 +369,10 @@ paths:
       responses:
         '200':
           description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/'
         '400':
           description: Invalid arguments
         '401':
@@ -367,6 +409,10 @@ paths:
       responses:
         '200':
           description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/'
         '400':
           description: Invalid arguments
         '401':
@@ -402,6 +448,10 @@ paths:
       responses:
         '200':
           description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/'
         '400':
           description: Invalid arguments
         '401':
@@ -431,6 +481,10 @@ paths:
       responses:
         '200':
           description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/'
         '400':
           description: Invalid arguments
         '401':
@@ -461,6 +515,10 @@ paths:
       responses:
         '200':
           description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/'
         '400':
           description: Invalid arguments
         '401':
@@ -492,6 +550,10 @@ paths:
       responses:
         '200':
           description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/'
         '400':
           description: Invalid arguments
         '401':
@@ -530,6 +592,10 @@ paths:
       responses:
         '200':
           description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/'
         '400':
           description: Invalid arguments
         '401':
@@ -565,6 +631,10 @@ paths:
       responses:
         '200':
           description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CorrelationCount'
         '400':
           description: Invalid arguments
         '401':
@@ -588,6 +658,10 @@ paths:
       responses:
         '200':
           description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/'
         '400':
           description: Invalid arguments
         '401':
@@ -617,6 +691,10 @@ paths:
       responses:
         '200':
           description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/'
         '400':
           description: Invalid arguments
         '401':
@@ -639,6 +717,10 @@ paths:
       responses:
         '200':
           description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetadataConstants'
         '400':
           description: Invalid arguments
         '401':
@@ -647,3 +729,124 @@ paths:
           description: Forbidden
         '404':
           description: Not found
+
+components:
+  schemas:
+    IncidentCreated:
+      title: IncidentCreate
+      type: object
+      properties:
+    GetIncident:
+      title: GetIncident
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique ID for an observation
+        cid:
+          type: string
+          description: Customer account ID
+        version:
+          type: string
+          description: Version number
+    IDAndAccount:
+      title: IncidentIDAndAccountID
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique ID for an observation
+        accountId:
+          type: string
+          description: Customer account ID
+    IncidentFilters:
+      title: IncidentFilters
+      type: object
+      properties:
+        threat_level:
+          type: array
+        class:
+          type: array
+        detection_source:
+          type: array
+    RecentEscalations:
+      title: RecentEscalations
+      type: object
+      properties:
+        escalation_time:
+          type: string
+          description: Time incident was escalated
+        summary:
+          type: string
+          description: Summary of incident
+        severity:
+          type: string
+          description: Severity rating of incident
+        escalator:
+          type: string
+          description: User who escalated
+        iris_incident_version:
+          type: string
+          description: Version
+    PartnerAPI:
+      title: PartnerAPI
+      type: array
+    IncidentHistory:
+      title: IncidentHistory
+      type: array
+      items:
+        type: object
+        properties:
+          details:
+            type: object
+          historyType:
+            type: number
+          message:
+            type: string
+          time:
+            number
+          time_str:
+            type: string
+          who:
+            type: string
+    IncidentSnooze:
+      title: IncidentSnooze
+      type: object
+      properties:
+        notes:
+          type: string
+        period:
+          type: number
+        reactivates_at:
+          type: string
+        reason_code:
+          type: string
+        snoozed:
+          type: boolean
+        user:
+          type: string
+
+    CorrelationCount:
+      title: CorrelationCount
+      type: integer
+      description: Count of the number of open incidents with the correlation id
+
+    MetadataConstants:
+      title: MetadataConstants
+      type: object
+      properties:
+        incident-class-names:
+          type: object
+        incident-history-types:
+          type: object
+        log-types:
+          type: object
+        sourceMap:
+          type: object
+
+  securitySchemes:
+    X-AIMS-Auth-Token:
+      name: X-AIMS-Auth-Token
+      type: apiKey
+      in: header
+      description: AIMS Authentication Token
