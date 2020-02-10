@@ -1,0 +1,161 @@
+openapi: 3.0.2
+info:
+  title: AIMS Service
+  version: '3.0'
+  description: "IRIS service"
+servers:
+  - url: 'https://api.cloudinsight.alertlogic.com'
+    description: production
+    x-alertlogic-session-endpoint: true
+  - url: 'https://api.product.dev.alertlogic.com'
+    description: integration
+    x-alertlogic-session-endpoint: true
+paths:
+  '/iris/v3/{account_id}/observation':
+    post:
+      summary: Create an incident in IRIS from an observation
+      tags: []
+      parameters:
+        - schema:
+            type: string
+          name: account_id
+          in: path
+          required: true
+          description: Customer account ID
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: json
+              x-alertlogic-schema:
+                name: observation
+        description: The observation to create an incident from
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X POST https://api.cloudinsight.alertlogic.com/iris/v3/1234/observation
+      responses:
+        '200':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentCreated'
+              examples:
+                Create incident from observation example:
+                  value:
+        '400':
+          description: Duplicate observation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type:
+              examples:
+                Duplicate example:
+                  value:
+                    error: "Duplicate observation"
+  '/iris/v3/{account_id}/{incident_id}':
+    get:
+      summary: Get a specific incident by its ID
+      tags: []
+      parameters:
+        - schema:
+            type: string
+          name: account_id
+          in: path
+          required: true
+          description: Customer account ID
+        - schema:
+         type: string
+         name: incident_id
+         in: path
+         required: true
+         description: Incident ID
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X GET https://api.cloudinsight.alertlogic.com/iris/v3/1234/1ab29e36-394e-11e9-a004-720004270420
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetIncident'
+        '400':
+          description: Invalid arguments
+        '401':
+          description: Unauthorised
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+
+  '/iris/v3/{friendly_id}/friendly':
+    get:
+      summary: Get an incident by its friendly ID
+      tags: []
+      parameters:
+        - schema:
+            type: string
+          name: friendly_id
+          in: path
+          required: true
+          description: Incident friendly ID
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X GET https://api.cloudinsight.alertlogic.com/iris/v3/aecbf/friendly
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Invalid arguments
+        '401':
+          description: Unauthorised
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+
+  '/iris/v3/{alpha_id}/alpha':
+    get:
+      summary: Get an incident by its alpha ID
+      tags: []
+      parameters:
+        - schema:
+            type: string
+          name: alpha_id
+          in: path
+          required: true
+          description: Incident alpha ID
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X GET https://api.cloudinsight.alertlogic.com/iris/v3/54627936/alpha
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Invalid arguments
+        '401':
+          description: Unauthorised
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+
+  '/iris/v3/':
+
+  '/iris/v3/':
