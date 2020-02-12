@@ -319,7 +319,12 @@ paths:
             schema:
               type: object
                 properties:
-
+                  period_ms:
+                    type: number
+                  reason_code:
+                    type: string
+                  notes:
+                    type: string
         description: The SQL statement to execute
       security:
         - X-AIMS-Auth-Token: []
@@ -360,6 +365,16 @@ paths:
             in: path
             required: true
             description: Incident ID
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+                properties:
+                  reason_code:
+                    type: string
+                  notes:
+                    type: string
       security:
         - X-AIMS-Auth-Token: []
       x-code-samples:
@@ -372,7 +387,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/'
+                $ref: '#/components/schemas/IncidentCompleted'
         '400':
           description: Invalid arguments
         '401':
@@ -399,6 +414,18 @@ paths:
             in: path
             required: true
             description: Incident ID
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                operation:
+                  type: string
+                reason_code:
+                  type: string
+                notes:
+                  type: string
       security:
         - X-AIMS-Auth-Token: []
       x-code-samples:
@@ -412,7 +439,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/'
+                $ref: '#/components/schemas/IncidentFeedback'
         '400':
           description: Invalid arguments
         '401':
@@ -451,7 +478,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/'
+                $ref: '#/components/schemas/IncidentAssets'
         '400':
           description: Invalid arguments
         '401':
@@ -472,6 +499,22 @@ paths:
           in: path
           required: true
           description: Customer account ID
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+                properties:
+                  period_ms:
+                    type: number
+                  reason_code:
+                    type: string
+                  notes:
+                    type: string
+                  incidents:
+                    type: array
+                    items:
+                      type: string
       security:
         - X-AIMS-Auth-Token: []
       x-code-samples:
@@ -505,6 +548,22 @@ paths:
           in: path
           required: true
           description: Customer account ID
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+                properties:
+                  operation:
+                    type: string
+                  reason_code:
+                    type: string
+                  notes:
+                    type: string
+                  incidents:
+                    type: array
+                    items:
+                      type: string
       security:
         - X-AIMS-Auth-Token: []
       x-code-samples:
@@ -518,7 +577,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/'
+                $ref: '#/components/schemas/IncidentBatchComplete'
         '400':
           description: Invalid arguments
         '401':
@@ -539,6 +598,22 @@ paths:
           in: path
           required: true
           description: Customer account ID
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+                properties:
+                  operation:
+                    type: string
+                  reason_code:
+                    type: string
+                  notes:
+                    type: string
+                  incidents:
+                    type: array
+                    items:
+                      type: string
       security:
         - X-AIMS-Auth-Token: []
       x-code-samples:
@@ -553,7 +628,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/'
+                $ref: '#/components/schemas/IncidentBatchFeedback'
         '400':
           description: Invalid arguments
         '401':
@@ -595,7 +670,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/'
+                $ref: '#/components/schemas/IncidentBatchUndo'
         '400':
           description: Invalid arguments
         '401':
@@ -648,6 +723,16 @@ paths:
     post:
       summary: Translate a list of query string filters into al_query
       tags: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+                properties:
+                  query_string:
+                    type: string
+                  query:
+                    type: array
       security:
         - X-AIMS-Auth-Token: []
       x-code-samples:
@@ -661,7 +746,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/'
+                $ref: '#/components/schemas/DSLTranslate'
         '400':
           description: Invalid arguments
         '401':
@@ -825,11 +910,79 @@ components:
           type: boolean
         user:
           type: string
-
+    IncidentCompleted:
+      title: IncidentCompleted
+      type: array
+      items: object
+    IncidentFeedback:
+      title: IncidentFeedback
+      type: object
+      properties:
+        undo_token:
+          type: string
+        updates:
+          type: object
+          properties:
+            incident_id:
+              type: object
+              properties:
+                account_id:
+                  type: string
+                change:
+                  type: object
+    IncidentAssets:
+      title: IncidentAssets
+      type: object
+      properties:
+        returnVals:
+          type: array
+    IncidentBatchComplete:
+      title: IncidentBatchComplete
+      type: object
+      properties:
+        undo_token:
+          type: string
+        updates:
+          type: object
+          properties:
+            incident_id:
+              type: object
+              properties:
+                account_id:
+                  type: string
+                change:
+                  type: object
+    IncidentBatchFeedback:
+      title: IncidentBatchFeedback
+      type: object
+      properties:
+        undo_token:
+          type: string
+        updates:
+          type: object
+          properties:
+            incident_id:
+              type: object
+              properties:
+                account_id:
+                  type: string
+                change:
+                  type: object
+    IncidentBatchUndo:
+      title: IncidentBatchUndo
+      type: array
+      items:
+        type: object
+          properties:
+            incident_id:
+              type: string
     CorrelationCount:
       title: CorrelationCount
       type: integer
       description: Count of the number of open incidents with the correlation id
+    DSLTranslate:
+      title: DSLTranslate
+      type: object
 
     MetadataConstants:
       title: MetadataConstants
