@@ -235,6 +235,12 @@ paths:
       summary: Get the incidents for a time range you have access to
       tags: []
       parameters:
+        - schema:
+            type: string
+            name: start_time
+        - schema:
+            type: string
+            name: end_time
       security:
         - X-AIMS-Auth-Token: []
       x-code-samples:
@@ -515,6 +521,7 @@ paths:
                     type: array
                     items:
                       type: string
+                      description: incident ids
       security:
         - X-AIMS-Auth-Token: []
       x-code-samples:
@@ -821,6 +828,10 @@ components:
       title: IncidentCreate
       type: object
       properties:
+        id:
+          type: string
+        incident_id:
+          type: string
     GetIncident:
       title: GetIncident
       type: object
@@ -830,10 +841,27 @@ components:
           description: The unique ID for an observation
         cid:
           type: string
-          description: Customer account ID
         version:
           type: string
-          description: Version number
+        visibility:
+          type:
+            string
+        severity:
+          type:
+            string
+        parents:
+          type:
+            array:
+              items:
+        customer:
+          type:
+            string
+        incident:
+          type:
+            object
+        statistics:
+          type:
+            object
     IDAndAccount:
       title: IncidentIDAndAccountID
       type: object
@@ -876,6 +904,8 @@ components:
     PartnerAPI:
       title: PartnerAPI
       type: array
+      items:
+        type: object
     IncidentHistory:
       title: IncidentHistory
       type: array
