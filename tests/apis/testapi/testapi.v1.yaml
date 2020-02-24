@@ -1,0 +1,154 @@
+openapi: 3.0.2
+info:
+  title: Test Service
+  version: '1.0'
+  description: Test Service API Test
+  contact:
+    name: Alert Logic Support
+    email: devsupport@alertlogic.com
+  license:
+    name: MIT
+servers:
+  - url: 'https://api.global-services.global.alertlogic.com'
+    description: production
+    x-alertlogic-session-endpoint: true
+  - url: 'https://api.global-integration.product.dev.alertlogic.com'
+    description: integration
+    x-alertlogic-session-endpoint: true
+paths:
+  '/testapi/v1/{account_id}/test_get_data':
+    get:
+      summary: Test Get Data Operation
+      tags: []
+      responses: {}
+      operationId: test_get_data
+      description: Test get data with header and query parameters
+      security:
+        - X-AIMS-Auth-Token: []
+      parameters:
+        - schema:
+            type: string
+            enum:
+              - choice1
+              - choice2
+              - choice3
+            default: choice1
+          in: header
+          name: header_param1
+          required: true
+          description: 'header parameter 1 description: required; string'
+        - schema:
+            type: integer
+          in: header
+          name: header_param2
+          description: header parameter 2 description - integer
+        - schema:
+            type: string
+          in: query
+          name: query_param1
+          description: 'query parameter 1 description: required; string'
+          required: true
+        - schema:
+            type: array
+          in: query
+          name: query_param1
+          description: 'query parameter 1 description: optional; array'
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+    post:
+      summary: ''
+      operationId: post_payload_in_body
+      responses:
+        '200':
+          description: OK
+      description: Post json object with keys being serialized
+      security:
+        - X-AIMS-Auth-Token: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+                  description: Serializable Object
+              required:
+                - data
+            x-alertlogic-schema:
+              in: body
+              required: true
+          application/protobuf:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: string
+                  format: binary
+              required:
+                - data
+        description: |-
+          The result of this operation is to pass `payload` keys as data for http post, not the payload.
+          For example: {tagset: {key1: value1, key2: value2}} will be passed as {key1: value1, key2, value2}
+components:
+  schemas:
+    SimpleDataTypesModel:
+      title: SimpleDataTypesModel Data Type
+      type: object
+      description: This is a simple data types model
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: unique id
+        enum_string_property:
+          type: string
+          default: choice1
+          enum:
+            - choice1
+            - choice2
+            - choice3
+          pattern: '^[A-Za-z0-9-_]+'
+          description: enum_string_property_description
+        number_property:
+          type: number
+          format: double
+        binary_property:
+          type: string
+          format: binary
+      required:
+        - id
+    NestedDataTypeModel:
+      title: NestedDataTypeModel
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: unique identifier
+        data:
+          $ref: '#/components/schemas/SimpleDataTypesModel'
+        embedded_object:
+          type: object
+          description: embedded object
+          properties:
+            test_string:
+              type: string
+      required:
+        - id
+        - embedded_object
+  securitySchemes:
+    X-AIMS-Auth-Token:
+      name: X-AIMS-Auth-Token
+      type: apiKey
+      in: header
+      description: AIMS Authentication Token
+    Basic HTTP Authorization:
+      type: http
+      scheme: basic
+

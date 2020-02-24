@@ -1,6 +1,6 @@
 openapi: 3.0.2
 info:
-  title: ae_tuner
+  title: aetuner
   version: '1.0'
   description: Analytics Engine Tuning Service
 servers:
@@ -131,17 +131,13 @@ paths:
                 tuning:
                   type: object
                   description: Tuning Parameters. The list of tuning parameters depends on the analytic being tuned. Tunable options can be seen in `tuning_properties` property of the `analytic` object returned by get_analytic for the analytic.
+                  additionalProperties: true
       description: Update an ananlytic
       x-amazon-apigateway-integration:
         uri:
           'Fn::Sub': 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AETunerUpdateAnalyticFunction.Arn}/invocations'
 components:
   securitySchemes:
-    auth:
-      type: apiKey
-      in: header
-      name: X-AIMS-Auth-Token
-      description: AIMS Authentication Token
     aims_request_authorizer:
       type: apiKey
       name: X-AIMS-Auth-Token

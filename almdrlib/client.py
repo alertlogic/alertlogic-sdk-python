@@ -2,20 +2,21 @@
 
 """
     almdrlib.client
-    ~~~~~~~~~~~~~~
-    almdrlib OpenAPI v3 dynamic client builder 
+    ~~~~~~~~~~~~~~~
+    almdrlib OpenAPI v3 dynamic client builder
 """
 
 import os
 import glob
-import sys
-import typing
-import inspect
+# import typing
+# import inspect
 import logging
 import pprint
 import yaml
 import json
-import requests
+from almdrlib.exceptions import AlmdrlibValueError
+from almdrlib.config import Config
+
 
 class OpenAPIKeyWord:
     OPENAPI = "openapi"
@@ -38,6 +39,7 @@ class OpenAPIKeyWord:
     QUERY = "query"
     HEADER = "header"
     COOKIE = "cookie"
+    BODY = "body"
     NAME = "name"
     REQUIRED = "required"
     SCHEMA = "schema"
@@ -59,8 +61,14 @@ class OpenAPIKeyWord:
     REQUIRED = "required"
     CONTENT = "content"
     DEFAULT = "default"
+    ENCODING = "encoding"
+    EXPLODE = "explode"
+    CONTENT_TYPE_PARAM = "content-type"
     CONTENT_TYPE_JSON = "application/json"
     CONTENT_TYPE_TEXT = "text/plain"
+    CONTENT_TYPE_PYTHON_PARAM = "content_type"
+
+    JSON_CONTENT_TYPES = ["application/json", "alertlogic.com/json"]
 
     SIMPLE_DATA_TYPES = [STRING, ARRAY, BOOLEAN, INTEGER, NUMBER]
     DATA_TYPES = [STRING, OBJECT, ARRAY, BOOLEAN, INTEGER, NUMBER]
@@ -68,31 +76,39 @@ class OpenAPIKeyWord:
     INDIRECT_TYPES = [ALL_OF, ANY_OF, ONE_OF]
 
     # Alert Logic specific extensions
-    X_REQUEST_BODY = "x-alertlogic-request-body"
     X_ALERTLOGIC_SCHEMA = "x-alertlogic-schema"
-
     X_ALERTLOGIC_SESSION_ENDPOINT = "x-alertlogic-session-endpoint"
+    X_ALERTLOGIC_DEFAULT_PAYLOAD_PARAM_NAME = "data"
+
 
 logger = logging.getLogger(__name__)
 
+
 class Server(object):
-    _url: str
-    description: str
-    variables: typing.Dict[str, typing.Any]
 
     def __init__(self, service_name,
-            url=None, description=None,
-            variables=None,
-            variables_spec=None,
-            al_session_endpoint=False,
-            session = None):
+                 url=None, description=None,
+                 variables=None,
+                 variables_spec=None,
+                 al_session_endpoint=False,
+                 session=None):
         self._service_name = service_name
         self.description = description
-        self.variables = variables or variables_spec and dict((k, v.get(OpenAPIKeyWord.DEFAULT)) for (k, v) in variables_spec.items()) or None
+        if variables:
+            self.variables = variables
+        elif variables_spec:
+            self.variables = dict((k, v.get(OpenAPIKeyWord.DEFAULT))
+                                  for (k, v) in variables_spec.items())
+        else:
+            self.variables = None
 
         # Alert Logic extention to use Global Endpoint
-        self._url = al_session_endpoint and session and session.get_url(self._service_name) or url
-        logger.debug(f"Using '{self._url}' URL for '{self._service_name}' service.")
+        self._url = \
+            al_session_endpoint and session and \
+            session.get_url(self._service_name) or \
+            url
+        logger.debug(f"Using '{self._url}' URL " +
+                     f"for '{self._service_name}' service.")
 
     @property
     def url(self):
@@ -104,43 +120,16 @@ class Server(object):
     def set_url(self, url):
         self._url = url
 
-class RequestBody(object):
-    def __init__(self, content_type, schema, required, session=None):
-        self._content_type = content_type
+
+class RequestBodySimpleParameter(object):
+    def __init__(self, name, schema, required, session):
+        self._name = name
         self._schema = schema
         self._required = required
         self._session = session
 
-    def serialize(self, headers, kwargs):
-        body = {}
-
-        if not all(name in kwargs for name in self._required):
-            raise ValueError(f"'{self._required}' are required'")
-        for property_name in self._schema.get(OpenAPIKeyWord.PROPERTIES, {}).keys():
-            if property_name not in kwargs: continue
-            body[property_name] = kwargs.pop(property_name)
-
-        headers['Content-Type'] = self._content_type 
-        if self._content_type == OpenAPIKeyWord.CONTENT_TYPE_JSON:
-            kwargs['data'] = json.dumps(body) 
-        elif self._content_type == OpenAPIKeyWord.CONTENT_TYPE_TEXT:
-            kwargs['data'] = next(iter(body.values()))
-
-    @property
-    def schema(self):
-        return self._schema 
-
-class PathParameter(object):
-    def __init__(self, spec = {}, session = None):
-        # TODO: Rework PathParameter to work based on the saved spec
-        self._in = spec[OpenAPIKeyWord.IN]
-        self._name = spec[OpenAPIKeyWord.NAME]
-        self._required = spec.get(OpenAPIKeyWord.REQUIRED, False)
-        self._description = spec.get(OpenAPIKeyWord.DESCRIPTION, "")
-        self._dataype = get_dict_value(spec, [OpenAPIKeyWord.SCHEMA, OpenAPIKeyWord.TYPE], OpenAPIKeyWord.STRING)
-        self._spec = spec
-        self._session = session
-        self._default = None
+    def serialize(self, value, header=None):
+        return {'data': value}
 
     @property
     def name(self):
@@ -150,7 +139,184 @@ class PathParameter(object):
     def required(self):
         return self._required
 
-    @property 
+    @property
+    def schema(self):
+        return self._schema
+
+
+class RequestBodyObjectParameter(object):
+    def __init__(self,
+                 name,
+                 schema,
+                 encoding=None,
+                 required=False,
+                 session=None):
+        self._name = name
+        self._required = required
+        self._schema = schema
+        self._schema[OpenAPIKeyWord.REQUIRED] = required
+        self._encoding = encoding
+        self._session = session
+
+    def serialize(self, value, headers=None):
+        if self._encoding and self._encoding.get(OpenAPIKeyWord.EXPLODE):
+            return value
+        else:
+            return {self._name, value}
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def required(self):
+        return self._required
+
+    @property
+    def schema(self):
+        return self._schema
+
+
+class RequestBody(object):
+    def __init__(self, required=False, description=None, session=None):
+        self._required = required
+        self._description = description
+        self._session = session
+        self._content_types = {}
+        self._content = {}
+        self._default_content_type = None
+
+    def add_content(self, content_type, schema, encoding):
+        request_properties = {}
+        datatype = schema[OpenAPIKeyWord.TYPE]
+        if datatype == OpenAPIKeyWord.OBJECT:
+            schema_properties = schema.get(OpenAPIKeyWord.PROPERTIES, [])
+            required_properties = schema.get(OpenAPIKeyWord.REQUIRED, [])
+            request_properties = {
+                prop_name: RequestBodyObjectParameter(
+                        name=prop_name,
+                        schema=prop_schema,
+                        encoding=encoding.get(prop_name),
+                        required=prop_name in required_properties,
+                        session=self._session
+                    )
+                for prop_name, prop_schema in schema_properties.items()
+            }
+        elif datatype in OpenAPIKeyWord.SIMPLE_DATA_TYPES:
+            prop_name = schema.get(
+                    OpenAPIKeyWord.NAME,
+                    OpenAPIKeyWord.X_ALERTLOGIC_DEFAULT_PAYLOAD_PARAM_NAME)
+
+            request_properties = {
+                prop_name: RequestBodySimpleParameter(
+                        name=prop_name,
+                        schema=schema,
+                        required=self._required,
+                        session=self._session
+                    )
+            }
+        else:
+            raise AlmdrlibValueError(
+                    f"'{datatype}' is invalid for requestBody property")
+
+        self._content[content_type] = request_properties
+
+    def serialize(self, headers, kwargs):
+        #
+        # Get content parameters.
+        #
+        if OpenAPIKeyWord.CONTENT_TYPE_PARAM in headers:
+            content_type = headers[OpenAPIKeyWord.CONTENT_TYPE_PARAM]
+            content = self._content[content_type]
+        elif len(self._content) == 1:
+            content_type, content = next(iter(self._content.items()))
+            headers[OpenAPIKeyWord.CONTENT_TYPE_PARAM] = content_type
+        else:
+            raise AlmdrlibValueError(
+                f"'{OpenAPIKeyWord.CONTENT_TYPE_PYTHON_PARAM}'" +
+                "parameter is required.")
+
+        # Get required properties list
+        # and make sure all of them are present in kwargs
+        required = self._get_required_properties(content)
+        if not all(name in kwargs for name in required):
+            raise AlmdrlibValueError(
+                f"'{required}' parameters are required. " +
+                f"'{kwargs}' were provided.")
+
+        result = {}
+        for name, property in content.items():
+            result.update(property.serialize(value=kwargs.pop(name)))
+
+        if content_type in OpenAPIKeyWord.JSON_CONTENT_TYPES:
+            kwargs['data'] = json.dumps(result)
+        else:
+            kwargs['data'] = next(iter(result.values()))
+
+    def get_schema(self):
+        content_count = len(self._content)
+        if content_count == 1:
+            content = next(iter(self._content.values()))
+            return {
+                OpenAPIKeyWord.PROPERTIES: self._get_content_schema(content)
+            }
+        elif content_count:
+            #
+            # Content Type is a required property
+            # when number of content types is greater than 0
+            #
+            return {
+                OpenAPIKeyWord.CONTENT: {
+                    content_type: {
+                        OpenAPIKeyWord.PROPERTIES: self._get_content_schema(
+                                                            content),
+                    }
+                    for content_type, content in self._content.items()
+                }
+            }
+        else:
+            return {}
+
+    def _get_content_schema(self, content):
+        return {name: property.schema for name, property in content.items()}
+
+    def _get_required_properties(self, content):
+        return [property.name
+                for property in content.values() if property.required]
+
+
+class PathParameter(object):
+    def __init__(self, spec={}, session=None):
+        # TODO: Rework PathParameter to work based on the saved spec
+        self._in = spec[OpenAPIKeyWord.IN]
+        self._init_name(spec[OpenAPIKeyWord.NAME])
+        self._required = spec.get(OpenAPIKeyWord.REQUIRED, False)
+        self._description = spec.get(OpenAPIKeyWord.DESCRIPTION, "")
+        self._dataype = get_dict_value(
+                            spec,
+                            [OpenAPIKeyWord.SCHEMA, OpenAPIKeyWord.TYPE],
+                            OpenAPIKeyWord.STRING)
+        self._spec = spec
+        self._session = session
+        self._default = None
+
+    def _init_name(self, name):
+        self._name = name.replace('-', '_')
+        self._schema_name = name
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def schema_name(self):
+        return self._schema_name
+
+    @property
+    def required(self):
+        return self._required
+
+    @property
     def description(self):
         return self._description
 
@@ -169,7 +335,7 @@ class PathParameter(object):
         result = {}
         for name, value in self._spec.items():
             if OpenAPIKeyWord.SCHEMA == name:
-                result.update({k:v for k, v in value.items()})
+                result.update({k: v for k, v in value.items()})
             elif OpenAPIKeyWord.NAME == name:
                 continue
             else:
@@ -182,23 +348,37 @@ class PathParameter(object):
             if self._required:
                 raise ValueError(f"'{self._name}' is required")
             return
-        value = serialize_value(self._dataype, kwargs.pop(self._name, self.default))
+
+        value = serialize_value(
+                self._dataype,
+                kwargs.pop(self._name, self.default))
+
         if self._in == OpenAPIKeyWord.PATH:
-            path_params[self._name] = value
+            path_params[self.schema_name] = value
         elif self._in == OpenAPIKeyWord.QUERY:
-            query_params[self._name] = value
-        elif _in == OpenAPIKeyWord.HEADER:
-            headers[self._name] = value
-        elif _in == OpenAPIKeyWord.COOKIE:
-            cookies[self._name] = value
-       
+            query_params[self.schema_name] = value
+        elif self._in == OpenAPIKeyWord.HEADER:
+            headers[self.schema_name] = value
+        elif self._in == OpenAPIKeyWord.COOKIE:
+            cookies[self.schema_name] = value
+
         return True
+
 
 class Operation(object):
     _internal_param_prefix = "_"
-    _call: typing.Optional[typing.Callable] = None
+    _call = None
 
-    def __init__(self, path, ref, params, summary, description, method, spec, body, session=None, server=None):
+    def __init__(self,
+                 path,
+                 ref,
+                 params,
+                 summary,
+                 description,
+                 method, spec,
+                 body,
+                 session=None,
+                 server=None):
         self._path = path
         self._ref = ref
         self._params = params
@@ -242,36 +422,25 @@ class Operation(object):
         return self._server.url + self._path.format(**kwargs)
 
     def get_schema(self):
+        result = {
+            OpenAPIKeyWord.OPERATION_ID: self.operation_id,
+            OpenAPIKeyWord.DESCRIPTION: self.description
+        }
         params_schema = {}
         for param in self.params:
             params_schema.update({param.name: param.schema})
+
         if self.body:
-            params_schema.update(self.body.schema.get(OpenAPIKeyWord.PROPERTIES, {}))
+            schema = self.body.get_schema()
+            if OpenAPIKeyWord.CONTENT in schema:
+                result.update(schema)
+            else:
+                params_schema.update(schema.get(OpenAPIKeyWord.PROPERTIES))
 
-        return {
-            OpenAPIKeyWord.OPERATION_ID: self.operation_id,
-            OpenAPIKeyWord.DESCRIPTION: self.description,
+        result.update({
             OpenAPIKeyWord.PARAMETERS: params_schema
-        }
-
-    def _get_body(self, headers, body, kwargs):
-        body_spec = self._spec.get(OpenAPIKeyWord.REQUEST_BODY)
-        if not body_spec:
-            return
-
-        name = body_spec.get(OpenAPIKeyWord.REQUEST_BODY_NAME, OpenAPIKeyWord.REQUEST_BODY)
-
-        content = body_spec.get(OpenAPIKeyWord.CONTENT)
-        if not content:
-            raise ValueError(f"'{OpenAPIKeyWord.CONTENT}' is required for '{OpenAPIKeyWord.REQUEST_BODY}'")
-        
-        # for now get the first content type
-        content_type, schema_spec = content.popitem()
-        headers.update({"Content-Type": content_type})
-        ref = schema_spec[OpenAPIKeyWord.SCHEMA].get(OpenAPIKeyWord.REF)
-        if ref:
-            parts = ref.split('/')
-            t = getattr(sys.modules[__name__], parts[3])
+        })
+        return result
 
     def _gen_call(self):
         def f(**kwargs):
@@ -279,8 +448,7 @@ class Operation(object):
             params = {}
             headers = {}
             cookies = {}
-            body = {}
-            
+
             # Set operation specific parameters
             for param in self._params:
                 param.serialize(path_params, params, headers, cookies, kwargs)
@@ -295,7 +463,7 @@ class Operation(object):
                 kwargs[
                     k[len(self._internal_param_prefix) :]  # noqa: E203
                 ] = kwargs.pop(k)
-            
+
             kwargs.setdefault("params", {}).update(params)
             kwargs.setdefault("headers", {}).update(headers)
             kwargs.setdefault("cookies", {}).update(cookies)
@@ -303,9 +471,8 @@ class Operation(object):
             return self._session.request(
                 self._method, self.url(**path_params), **kwargs
             )
-            
+
         return f
-            
 
     def __call__(self, *args, **kwargs):
         if not self._call:
@@ -318,12 +485,14 @@ class Operation(object):
     def __repr__(self):
         return f"<{type(self).__name__}: [{self._method}] {self._path}>"
 
-class Client(object):
-    _operations: typing.Dict[str, typing.Any]
-    _spec: typing.Dict[str, typing.Any]
-    _models: typing.Dict[str, typing.Any]
 
-    def __init__(self, name, version=None, session=None, residency=None, variables=None):
+class Client(object):
+    def __init__(self,
+                 name,
+                 version=None,
+                 session=None,
+                 residency=None,
+                 variables=None):
         self._name = name
         self._server = None
         self._session = session
@@ -336,7 +505,7 @@ class Client(object):
 
     def load_service_spec(self, service_name, version=None, variables=None):
         service_spec_file = ""
-        service_api_dir = f"{os.path.dirname(__file__)}/apis/{service_name}"
+        service_api_dir = f"{Config.get_api_dir()}/{service_name}"
         if not version:
             # Find the latest version of the service api spes
             version = 0
@@ -348,9 +517,15 @@ class Client(object):
             version = version[:1] != "v" and version or version[1:]
 
         service_spec_file = f"{service_api_dir}/{service_name}.v{version}.yaml"
-        logger.debug(f"Initializing client for '{self._name}'. Spec: '{service_spec_file}' Variables: '{variables}'")
+        logger.debug(
+            f"Initializing client for '{self._name}'" +
+            f"Spec: '{service_spec_file}' Variables: '{variables}'")
         spec = load_spec_from_file(service_spec_file)
         self.load_spec(spec, variables)
+
+    @property
+    def name(self):
+        return self._name
 
     @property
     def server(self):
@@ -376,7 +551,7 @@ class Client(object):
     def spec(self):
         return self._spec
 
-    def load_spec(self, spec: typing.Dict, variables: typing.Dict):
+    def load_spec(self, spec, variables):
         if not all(
             [
                 i in spec
@@ -391,7 +566,7 @@ class Client(object):
 
         self._spec = spec.copy()
         _spec = spec.copy()
-        
+
         self._info = _spec.pop(OpenAPIKeyWord.INFO)
 
         servers = _spec.pop(OpenAPIKeyWord.SERVERS, [])
@@ -406,7 +581,10 @@ class Client(object):
                 description=s.get(OpenAPIKeyWord.DESCRIPTION),
                 variables=variables,
                 variables_spec=s.get(OpenAPIKeyWord.VARIABLES),
-                al_session_endpoint=s.get(OpenAPIKeyWord.X_ALERTLOGIC_SESSION_ENDPOINT, False),
+                al_session_endpoint=s.get(
+                        OpenAPIKeyWord.X_ALERTLOGIC_SESSION_ENDPOINT,
+                        False
+                    ),
                 session=self._session
             )
             for s in servers
@@ -416,16 +594,17 @@ class Client(object):
             self._server = self.servers[0]
 
         self._initialize_operations()
-    
+
     def _initialize_operations(self):
         self._operations = {}
         for path, path_spec in self.paths.items():
-            ref = path_spec.pop(OpenAPIKeyWord.REF, "") #TODO: Add ref handler
+            # TODO: Add ref handler
+            ref = path_spec.pop(OpenAPIKeyWord.REF, "")
 
             params = [
                 PathParameter(
-                    spec = param_spec,
-                    session = self._session
+                    spec=param_spec,
+                    session=self._session
                 )
                 for param_spec in path_spec.pop(OpenAPIKeyWord.PARAMETERS, [])
             ]
@@ -437,21 +616,23 @@ class Client(object):
 
                 if not operation_id:
                     logging.warn(
-                        f"'{OpenAPIKeyWord.OPERATION_ID}' not found in: '[{method}] {path}'"
+                        f"'{OpenAPIKeyWord.OPERATION_ID}' not found in: \
+                          '[{method}] {path}'"
                     )
                     continue
 
                 params.extend([
                     PathParameter(
-                        spec = param_spec,
-                        session = self._session
+                        spec=param_spec,
+                        session=self._session
                     )
-                    for param_spec in op_spec.get(OpenAPIKeyWord.PARAMETERS, [])
+                    for param_spec in op_spec.get(OpenAPIKeyWord.PARAMETERS,
+                                                  [])
                 ])
 
-                body = self._initalize_request_body(op_spec.get(OpenAPIKeyWord.REQUEST_BODY, None))
+                body = self._initalize_request_body(
+                        op_spec.pop(OpenAPIKeyWord.REQUEST_BODY, None))
 
-                op_body = op_spec.pop(OpenAPIKeyWord.REQUEST_BODY, None)
                 if operation_id not in self._operations:
                     self._operations[operation_id] = Operation(
                         path,
@@ -462,8 +643,8 @@ class Client(object):
                         method,
                         op_spec,
                         body,
-                        session = self._session,
-                        server = self._server
+                        session=self._session,
+                        server=self._server
                     )
                 else:
                     v = self._operations[operation_id]
@@ -479,104 +660,106 @@ class Client(object):
                             method,
                             op_spec,
                             body,
-                            session = self._session,
-                            server = self._server
+                            session=self._session,
+                            server=self._server
                         )
                     )
 
-    def _initalize_request_body(self, body_spec = None):
-        if not body_spec: return None 
-        
+    def _initalize_request_body(self, body_spec=None):
+        if not body_spec:
+            return None
+
         content = body_spec.pop(OpenAPIKeyWord.CONTENT, {})
-        content_type, schema_spec = content.popitem()
         description = body_spec.pop(OpenAPIKeyWord.DESCRIPTION, None)
-        
-        schema = schema_spec.pop(OpenAPIKeyWord.SCHEMA)
-        al_schema = schema.pop(OpenAPIKeyWord.X_ALERTLOGIC_SCHEMA, {})
-        al_property_name = al_schema.get(OpenAPIKeyWord.NAME)
+        required = body_spec.pop(OpenAPIKeyWord.REQUIRED, False)
+        request_body = RequestBody(required=required,
+                                   description=description,
+                                   session=self._session)
 
-        body_schema = self._get_object_schema(
-                schema, 
-                property_name=al_property_name,
-                description=description)
+        for content_type, content_schema in content.items():
+            schema = content_schema.get(OpenAPIKeyWord.SCHEMA)
+            al_schema = content_schema.get(OpenAPIKeyWord.X_ALERTLOGIC_SCHEMA)
+            encoding = content_schema.pop(OpenAPIKeyWord.ENCODING, {})
+            request_body.add_content(content_type,
+                                     self._expand_schema(schema, al_schema),
+                                     encoding)
 
-        required_properties = schema.get(OpenAPIKeyWord.REQUIRED, [])
-        if al_property_name:
-            required_properties.append(al_property_name)
+        return request_body
 
-        return RequestBody(content_type, body_schema, required_properties, session=self._session)
-
-    def _get_object_schema(self, schema, property_name=None, description=None):
-        '''
-            Get Object's schema. If ref is present, resolve it.
-        '''
-        if schema is None:
-            return None 
+    def _expand_schema(self, schema, al_schema=None):
+        if not schema:
+            return None
 
         ref = schema.get(OpenAPIKeyWord.REF)
         if ref:
-            model = self._get_model_reference(ref)
-            if property_name is None:
-                return self._get_object_schema(model)
-                
-            return {
-                        OpenAPIKeyWord.PROPERTIES: {
-                            property_name: self._get_object_schema(model, property_name, description)
-                    }
-                }
-        else:
-            datatype = schema.get(OpenAPIKeyWord.TYPE)
-            if datatype in OpenAPIKeyWord.DATA_TYPES:
-                return {
-                        OpenAPIKeyWord.PROPERTIES: {
-                            property_name or 'data': {
-                                OpenAPIKeyWord.TYPE: datatype,
-                                OpenAPIKeyWord.DESCRIPTION: description
-                            }
-                        }
-                    }
-            elif datatype != OpenAPIKeyWord.OBJECT:
-                raise ValueError(f"'{schema}' is unsupported.")
+            # Get Model schema
+            return self._expand_schema(self._get_model_reference(ref),
+                                       al_schema)
+
+        datatype = schema.get(OpenAPIKeyWord.TYPE)
+        if datatype not in OpenAPIKeyWord.DATA_TYPES:
+            raise AlmdrlibValueError(f"Invalid {datatype} data type \
+                                       specified for {self._name} API")
+
+        if datatype in OpenAPIKeyWord.SIMPLE_DATA_TYPES:
+            if al_schema:
+                #
+                # Add parameter name field to the schema
+                #
+                schema['name'] = al_schema.get(
+                        OpenAPIKeyWord.NAME,
+                        OpenAPIKeyWord.X_ALERTLOGIC_DEFAULT_PAYLOAD_PARAM_NAME
+                        )
+            return schema
 
         result = {}
-        required = []
-        for schema_key, schema_value in schema.items():
-            if schema_key == OpenAPIKeyWord.PROPERTIES:
+        for key, value in schema.items():
+            if key == OpenAPIKeyWord.PROPERTIES:
+                # Process OpenAPI defined properties
                 properties = {}
-                for name, value in schema_value.items():
-                    datatype = value.get(OpenAPIKeyWord.TYPE)
-                    if datatype in OpenAPIKeyWord.DATA_TYPES:
-                        properties[name] = value
-                    elif datatype == OpenAPIKeyWord.OBJECT:
-                        properties[name] = self._get_object_schema(value)
-                    elif OpenAPIKeyWord.REF in value:
-                        properties[name] = self._get_object_schema(value)
-                    else:
-                        # This is either oneOf, allOf or anyOf.
-                        indirect_type = next(iter(value))
-                        if not indirect_type in OpenAPIKeyWord.INDIRECT_TYPES:
-                            raise ValueError(f"'{schema}' is unsupported.")
+                for prop_name, prop_schema in value.items():
+                    ref = prop_schema.get(OpenAPIKeyWord.REF)
+                    if ref:
+                        #
+                        # Resolve model reference
+                        #
+                        properties[prop_name] = self._expand_schema(
+                                self._get_model_reference(ref),
+                                al_schema)
+                        result[key] = properties
+                        continue
 
-                        properties[name] = {
-                                OpenAPIKeyWord.TYPE: indirect_type,
-                                OpenAPIKeyWord.DESCRIPTION: value.get(OpenAPIKeyWord.DESCRIPTION, ""),
-                                indirect_type: [
-                                    self._get_object_schema(v)
-                                    for v in value[indirect_type]
+                    datatype = prop_schema.get(OpenAPIKeyWord.TYPE)
+                    if datatype in OpenAPIKeyWord.SIMPLE_DATA_TYPES:
+                        properties[prop_name] = prop_schema
+                    elif datatype == OpenAPIKeyWord.OBJECT:
+                        properties[prop_name] = self._expand_schema(
+                                                            prop_schema,
+                                                            al_schema)
+                    else:
+                        alternate_type, alternate_schemas = next(
+                                                    iter(prop_schema.items()))
+
+                        if alternate_type in OpenAPIKeyWord.INDIRECT_TYPES:
+                            properties[prop_name] = {
+                                alternate_type: [
+                                    self._expand_schema(alternate_schema,
+                                                        al_schema)
+                                    for alternate_schema in alternate_schemas
                                 ]
                             }
-                    result[schema_key] = properties
-            else:
-                if schema_key == OpenAPIKeyWord.REQUIRED:
-                    required = schema_value
-                result[schema_key] = schema_value
+                        else:
+                            raise AlmdrlibValueError(
+                                f"Invalid schema for '{self._name}' API's. \
+                                  Property: '{prop_name}'. \
+                                  Datatype: '{datatype}'")
 
-        #
-        # Mark required properties
-        #
-        for property_name in required:
-            result[OpenAPIKeyWord.PROPERTIES][property_name][OpenAPIKeyWord.REQUIRED] = True
-        return result 
+                result[key] = properties
+            else:
+                # Add OpenAPI keys and values
+                result[key] = value
+
+        return result
 
     def _get_model_reference(self, ref):
         # Get model object definitions
@@ -586,7 +769,6 @@ class Client(object):
         # TODO: Handle External File References
         return None
 
-
     def __getattr__(self, op_name):
         if op_name in self._operations:
             return self._operations[op_name]
@@ -594,10 +776,12 @@ class Client(object):
             f"'{type(self).__name__}' object has no attribute '{op_name}'"
         )
 
+
 def load_spec_from_file(file_path):
     with open(file_path) as f:
         s = f.read()
     return yaml.load(s, Loader=yaml.SafeLoader)
+
 
 def get_dict_value(dict, list, default=None):
     length = len(list)
@@ -610,6 +794,7 @@ def get_dict_value(dict, list, default=None):
     except (KeyError, TypeError):
         return default
     return default
+
 
 def serialize_value(datatype, value):
     if OpenAPIKeyWord.STRING == datatype:

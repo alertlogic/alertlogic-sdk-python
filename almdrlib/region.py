@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from almdrlib import NoValue
+from enum import Enum
 
 """
     alertlogic.region
@@ -15,6 +15,12 @@ ENDPOINTS = {
     "integration": "https://api.global-integration.product.dev.alertlogic.com"
 }
 
+
+class NoValue(Enum):
+    def __repr__(self):
+        return '<%s.%s>' % (self.__class__.__name__, self.name)
+
+
 class Residency(NoValue):
     @staticmethod
     def list_residencies():
@@ -24,14 +30,18 @@ class Residency(NoValue):
     US = 'us'
     EMEA = 'emea'
 
+
 class EndpointType(NoValue):
     API = 'api'
     UI = 'ui'
 
+
 class Region():
     """
-    Abstracts an alertlogic region, for now it only represents the api endpoint url
+    Abstracts an alertlogic region.
+    For now it only represents the api endpoint url
     """
+
     def __init__(self):
         pass
 
@@ -54,4 +64,3 @@ class Region():
                 account_id,
                 residency,
                 service_name)
-

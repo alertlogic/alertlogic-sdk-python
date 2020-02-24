@@ -15,11 +15,19 @@ with open('HISTORY.rst') as history_file:
 with open('README.md') as readme_file:
     readme = readme_file.read()
 
+requirements = [
+        'requests>=2.18',
+        'configparser>=4.0.2',
+        'pyyaml==5.1.2'
+    ]
+
+test_requirements = [ ]
+
 setup(
     name='alertlogic-sdk-python',
     version=version,
     url='https://github.com/alertlogic/alertlogic-sdk-python',
-    license='MIT',
+    license='MIT license',
     author='Alert Logic Inc.',
     author_email='devsupport@alertlogic.com',
     python_requires='>=3.7',
@@ -37,13 +45,11 @@ setup(
     scripts=[],
     packages=find_packages(exclude=['contrib', 'docs', 'tests*', 'troubleshooting']),
     include_package_data=True,
+    test_suite='tests',
+    tests_require=test_requirements,
     zip_safe=False,
     platforms='any',
-    install_requires=[
-        'requests>=2.18',
-        'configparser>=4.0.2',
-        'pyyaml==5.1.2'
-    ],
+    install_requires=requirements,
     extras_require={
         'dev': [
             'pytest>=3',

@@ -1,0 +1,17 @@
+[default]
+access_key_id=AAAAAAAAAAAAAAAAAA
+secret_key=BBBBBBBBBBBBBBBBBBBBBBBBBBBB
+global_endpoint=integration
+
+[production]
+access_key_id=CCCCCCCCCCCCCCCCCCC
+secret_key=DDDDDDDDDDDDDDDDDDDDDDDDDDD
+account_id=123456789
+residency=us
+
+[integration]
+access_key_id=EEEEEEEEEEEEEEEEE
+secret_key=FFFFFFFFFFFFFFFFFFFFFFFFF
+account_id=987654321
+global_endpoint=integration
+

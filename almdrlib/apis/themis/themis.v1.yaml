@@ -194,9 +194,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AWSValidateRoleInfo'
-              x-alertlogic-schema:
-                name: credentials
+              $ref: '#/components/schemas/ValidateCredentialInfo'
             examples:
               Validate Payload Example:
                 value:
@@ -205,8 +203,10 @@ paths:
                   arn: 'arn:aws:iam::386539788298:role/alertlogic'
                   external_id: '9786756453'
                   role_version: '2018-01-01'
-        x-alertlogic-request-body:
-          name: credentials
+            x-alertlogic-schema:
+              name: credentials
+              in: body
+              required: true
       description: Validate AWS IAM role provided by the customer across AlertLogic requirements
     parameters:
       - schema:
@@ -260,7 +260,7 @@ components:
           required:
             - s3_bucket
     AWSValidateRoleInfo:
-      title: credentials
+      title: AWSValidateRoleInfo
       type: object
       x-examples:
         AWS Validate Role Info Example:
@@ -269,7 +269,7 @@ components:
           role_version: '2017-11-27'
           arn: 'arn:aws:iam::386539788298:role/alertlogic'
           external_id: '9786756453'
-      description: ''
+      description: AWS Role Information
       properties:
         platform_type:
           type: string
@@ -300,6 +300,14 @@ components:
         - role_type
         - arn
         - external_id
+    ValidateCredentialInfo:
+      title: ValidateRoleCredentialInfo
+      type: object
+      properties:
+        credential:
+          $ref: '#/components/schemas/AWSValidateRoleInfo'
+      required:
+        - credential
   securitySchemes:
     X-AIMS-Auth-Token:
       name: X-AIMS-Auth-Token
