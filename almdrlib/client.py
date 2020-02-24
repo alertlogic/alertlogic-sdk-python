@@ -162,7 +162,7 @@ class RequestBodyObjectParameter(object):
         if self._encoding and self._encoding.get(OpenAPIKeyWord.EXPLODE):
             return value
         else:
-            return {self._name, value}
+            return {self._name: value}
 
     @property
     def name(self):
@@ -246,7 +246,8 @@ class RequestBody(object):
 
         result = {}
         for name, property in content.items():
-            result.update(property.serialize(value=kwargs.pop(name)))
+            if name in kwargs:
+                result.update(property.serialize(value=kwargs.pop(name)))
 
         if content_type in OpenAPIKeyWord.JSON_CONTENT_TYPES:
             kwargs['data'] = json.dumps(result)
