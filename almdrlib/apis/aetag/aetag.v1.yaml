@@ -107,6 +107,12 @@ paths:
               properties:
                 tagset:
                   type: object
+                  additionalProperties: true
+              required:
+                - tagset
+            encoding:
+              tagset:
+                explode: true
         description: Tagset Object
       parameters:
         - schema:
@@ -201,10 +207,14 @@ paths:
             schema:
               type: object
               properties:
-                tagest:
+                tagset:
                   type: object
-        x-alertlogic-request-body:
-          name: data
+                  additionalProperties: true
+              required:
+                - tagset
+            encoding:
+              tagset:
+                explode: true
     parameters: []
   '/aetag/v1/{account_id}/tunings':
     post:
@@ -239,8 +249,12 @@ paths:
               properties:
                 tagset:
                   type: object
-        x-alertlogic-request-body:
-          name: data
+                  additionalProperties: true
+              required:
+                - tagset
+            encoding:
+              tagset:
+                explode: true
     parameters:
       - schema:
           type: string
@@ -276,14 +290,17 @@ paths:
             schema:
               type: object
               properties:
-                tagest:
+                tagset:
                   type: object
-        x-alertlogic-request-body:
-          name: data
-        description: |+
-          map/object which validates against a given tagset definition
-
-
+                  additionalProperties: true
+                  description: JSON Object with key/values to set the tag set to.
+                  additionalProperties: true
+              required:
+                - tagset
+            encoding:
+              tagset:
+                explode: true
+        description: map/object which validates against a given tagset definition
       parameters:
         - schema:
             type: string

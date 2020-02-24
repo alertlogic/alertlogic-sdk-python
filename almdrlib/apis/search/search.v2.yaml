@@ -48,7 +48,7 @@ paths:
       description: |-
         Request the execution of a new search.
 
-        Use the text/plain media type with an SQL statement to execute.
+        Use the text/plain media type with an SQL statement to execute http request.
         Details on how the SQL statements look will be given in a separate document.
         Old style search in JSON form can be passed as media type application/json.
       security:
@@ -76,9 +76,10 @@ paths:
           text/plain:
             schema:
               type: string
-              x-alertlogic-schema:
-                name: query_string
-        description: The SQL statement to execute
+              description: The SQL statement to execute
+            x-alertlogic-schema:
+              name: query_string
+        description: ''
     parameters:
       - schema:
           type: string

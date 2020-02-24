@@ -1,23 +1,20 @@
-__version__ = '1.0.4'
+__version__ = '1.0.5'
 __author__ = 'Alert Logic, Inc.'
 
 import logging
-from enum import Enum
-
-class NoValue(Enum):
-     def __repr__(self):
-         return '<%s.%s>' % (self.__class__.__name__, self.name)
-
 from almdrlib.session import Session
 
 IWS_DEFAULT_SESSION = None
+
 
 def set_logger(name='almdrlib', level=logging.DEBUG, format_string=None):
     """
     Add a stream handler for the given name and level to the logging module.
     By default, this logs all almdrlib messages to ``stdout``.
+
         >>> import almdrlib
         >>> almdrlib.set_logger('almdrlib.client', logging.INFO)
+
     For debugging purposes a good choice is to set the stream logger to ``''``
     which is equivalent to saying "log everything".
 
@@ -40,16 +37,19 @@ def set_logger(name='almdrlib', level=logging.DEBUG, format_string=None):
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
+
 def _get_default_session():
     global IWS_DEFAULT_SESSION
     if not IWS_DEFAULT_SESSION:
         IWS_DEFAULT_SESSION = Session()
     return IWS_DEFAULT_SESSION
 
-def client(service_name, version = None, session = None, *args, **kwargs):
+
+def client(service_name, version=None, session=None, *args, **kwargs):
     if session is None:
         session = _get_default_session()
     return session.client(service_name, version, *args, **kwargs)
+
 
 # Logging to dev/null
 # http://docs.python.org/3.3/howto/logging.html#configuring-logging-for-a-library
