@@ -1,5 +1,7 @@
-[![Build Status](https://travis-ci.com/alertlogic/alertlogic-sdk-python.svg?branch=master)](https://travis-ci.com/alertlogic/alertlogic-sdk-python)
 # The Alert Logic SDK For Python (almdrlib)
+[![pypi](https://img.shields.io/pypi/v/alertlogic-sdk-python.svg)](https://pypi.python.org/pypi/alertlogic-sdk-python)
+[![python](https://img.shields.io/pypi/pyversions/alertlogic-sdk-python.svg)](https://pypi.python.org/pypi/alertlogic-sdk-python)
+[![Build Status](https://travis-ci.com/alertlogic/alertlogic-sdk-python.svg?branch=master)](https://travis-ci.com/alertlogic/alertlogic-sdk-python)
 Alert Logic Software Development Kit for Python allows developers to integrate with Alert Logic MDR Services.
 
 ## Quick Start
