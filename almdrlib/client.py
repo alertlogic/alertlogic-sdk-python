@@ -21,6 +21,7 @@ from almdrlib.config import Config
 class OpenAPIKeyWord:
     OPENAPI = "openapi"
     INFO = "info"
+    TITLE = "title"
 
     SERVERS = "servers"
     URL = "url"

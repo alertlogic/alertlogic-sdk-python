@@ -1,0 +1,126 @@
+.wy-side-nav-search {
+    background-color: #3c3c3c;
+}
+
+.wy-side-nav-search img {
+    display: block;
+    margin: AUTO;
+    height: AUTO;
+    width: AUTO;
+    background-color: transparent;
+    padding: 0;
+    border-radius: 0;
+}
+
+.wy-nav-side {
+    background: #FFF;
+    color: #3B3B3B;
+    box-shadow: 3px 1px 5px 0 rgba(0, 0, 0, .24);
+}
+
+.wy-nav-content {
+    max-width: inherit;
+    background: #fcfcfc;
+}
+
+.fa-home:before, .icon-home:before {
+     content: "";
+}
+
+.wy-side-scroll {
+    width: auto;
+    overflow-y: auto;
+}
+
+p {
+    margin-bottom: 0.5rem;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5 {
+    margin-bottom: 12px;
+}
+
+.wy-menu-vertical a {
+    color: #3B3B3B;
+}
+
+.wy-menu-vertical a:hover {
+    background: #EDEDED;
+}
+
+
+a {
+    color: #5195C9;
+}
+
+a:hover {
+    color: #4682B0;
+}
+
+
+#global-coffee-data-standard h2 {
+    border-top: 3px dashed #535353;
+    padding-top: 0.5rem;
+    margin-top: 1rem;
+}
+
+.caption-text {
+    font-weight: bold;
+}
+
+
+div.wy-table-responsive>table.docutils td {
+    word-wrap: break-word;
+    white-space: inherit;
+    max-width: 20%;
+}
+
+div.wy-table-responsive>table.docutils td:nth-child(3) {
+    max-width: 40%;
+}
+
+div:not(#contents).topic {
+    border: 1px solid #EDEDED;
+    padding: 3px;
+    width: 100%;
+    border-radius: 3px;
+}
+
+div.topic p,
+div.topic p.topic-title {
+    margin-bottom: 0;
+}
+
+div:not(#contents).topic p.topic-title {
+    display: none;
+}
+
+button.btn-example-data {
+    background-color: #4e917a !important;
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+.rst-versions {
+    background: #6FAEDC;
+}
+
+.rst-versions a {
+    color: #535353;
+}
+
+.rst-current-version {
+    background: #EDF4FA;
+}
+
+.rst-current-versions {
+    color: #EDEDED;
+}
+
+.rst-other-versions {
+    color: #535353;
+}
