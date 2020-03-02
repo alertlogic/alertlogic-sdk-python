@@ -1,6 +1,6 @@
 openapi: 3.0.2
 info:
-  title: AIMS Service
+  title: IRIS service
   version: '3.0'
   description: "IRIS service"
 servers:
