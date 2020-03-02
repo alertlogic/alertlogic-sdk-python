@@ -49,6 +49,7 @@ Launch python interpreter and then type:
 >
 1. Python v3.7 or older
 2. virtualenv or virtualenvwrapper <https://virtualenvwrapper.readthedocs.io/en/latest/>
+3. pandoc for generating documentation. See <https://pypi.org/project/pypandoc/>
 >
 
 Setup your development environment and install required dependencies:
@@ -60,6 +61,6 @@ $ source /usr/local/bin/virtualenvwrapper.sh
 $ mkvirtualenv alsdk
 (alsdk) $ git clone https://github.com/alertlogic/alertlogic-sdk-python
 (alsdk) $ cd alertlogic-sdk-python
-(alsdk) $ pip install -r requirements.txt
+(alsdk) $ pip install -r requirements_dev.txt
 (alsdk) $ pip install -e .
 ```

@@ -5,6 +5,7 @@
     ~~~~~~~~~~~~~~~~
     almdrlib authentication/authorization
 """
+import types
 import os
 import logging
 
@@ -144,7 +145,12 @@ class Session():
         """
         Create Service's client class
         """
-        class_name = f"{service_name.capitalize()}Client"
+
+        # Create Service's module
+        module_name = service_name.capitalize()
+        types.ModuleType = module_name
+        #class_name = f"{service_name.capitalize()}Client"
+        class_name = "Client"
 
         #
         # Init function for the dynamically created class,
@@ -162,7 +168,11 @@ class Session():
 
         ServiceClient = type(class_name,
                              (Client,),
-                             {"__init__": __init__})
+                             {
+                                 '__init__': __init__,
+                                 '__module__': module_name
+                             }
+                        )
 
         _client = ServiceClient(service_name, session=self, version=version)
         logger.debug(
