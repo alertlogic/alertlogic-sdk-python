@@ -149,7 +149,6 @@ class Session():
         # Create Service's module
         module_name = service_name.capitalize()
         types.ModuleType = module_name
-        #class_name = f"{service_name.capitalize()}Client"
         class_name = "Client"
 
         #
@@ -171,8 +170,7 @@ class Session():
                              {
                                  '__init__': __init__,
                                  '__module__': module_name
-                             }
-                        )
+                             })
 
         _client = ServiceClient(service_name, session=self, version=version)
         logger.debug(
