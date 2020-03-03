@@ -15,8 +15,11 @@ APIDOCSDIR	  = ./$(BUILDDIR)/api_html
 APISPECFILES  := $(shell find $(APISDIR) -name '*.yaml')
 APIDOCFILES   := $(subst $(APISDIR),$(APIDOCSDIR),$(APISPECFILES:%.yaml=%.html))
 
+VPATH 		  = $(APISDIR)
+
 REDOC		  = npx redoc-cli
 REDOCOPTS     = bundle
+
 
 # Put it first so that "make" without argument is like "make help".
 help:
@@ -26,9 +29,7 @@ help:
 
 redoc: $(APIDOCFILES)
 
-$(APIDOCSDIR)/%.html: $(APISPECFILES)
-	@echo $@
-	@echo $<
+$(APIDOCSDIR)/%.html: %.yaml
 	$(REDOC) $(REDOCOPTS) $< -o $@
 
 
