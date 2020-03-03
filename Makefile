@@ -68,6 +68,7 @@ docs: ## generate Sphinx HTML documentation, including API docs
 	sphinx-apidoc -o docs/ almdrlib
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
+	$(MAKE) -C docs redoc
 	$(BROWSER) docs/_build/html/index.html
 
 release_test: dist ## package and upload a release to test pypi
