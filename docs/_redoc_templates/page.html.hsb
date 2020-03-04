@@ -25,43 +25,43 @@
                 options: [
                     {
                         caption: "AIMS",
-                        relativePath: "services/aims.v1.html"
+                        relativePath: "aims/aims.v1.html"
                     },
                     {
                         caption: "AEFR",
-                        relativePath: "services/aefr.v1.html"
+                        relativePath: "aefr/aefr.v1.html"
                     },
                     {
                         caption: "AETag",
-                        relativePath: "services/aetag/aetag.v1.html"
+                        relativePath: "aetag/aetag.v1.html"
                     },
                     {
                         caption: "AETuner",
-                        relativePath: "services/aetuner/aetuner.v1.html"
+                        relativePath: "aetuner/aetuner.v1.html"
                     },
                     {
                         caption: "Assets (Query)",
-                        relativePath: "services/assets_query.v1.html"
+                        relativePath: "assets_query/assets_query.v1.html"
                     },
                     {
                         caption: "Credentials",
-                        relativePath: "services/credentials.v2.html"
+                        relativePath: "credentials/credentials.v2.html"
                     },
                     {
                         caption: "Deployments",
-                        relativePath: "services/deployments/deployments.v1.html"
+                        relativePath: "deployments/deployments.v1.html"
                     },
                     {
                         caption: "Policies",
-                        relativePath: "services/policies/policies.v1.html"
+                        relativePath: "policies/policies.v1.html"
                     },
                     {
                         caption: "Search",
-                        relativePath: "services/search/search.v1.html"
+                        relativePath: "search/search.v2.html"
                     },
                     {
-                        caption: "Policies",
-                        relativePath: "services/themis/themis.v1.html"
+                        caption: "Themis",
+                        relativePath: "themis/themis.v1.html"
                     }
                 ]
             };
@@ -89,6 +89,7 @@
                 var select = instance.selector = document.createElement("select");
                 container.appendChild( select );
                 select.addEventListener( "change", selectShortcut );
+                select.classList.add("menu" );
                 for ( var i = 0; i < instance.options.length; i++ ) {
                     var option = instance.options[i];
                     var oel = document.createElement("option");
