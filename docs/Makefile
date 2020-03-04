@@ -18,7 +18,7 @@ APIDOCFILES   := $(subst $(APISDIR),$(APIDOCSDIR),$(APISPECFILES:%.yaml=%.html))
 VPATH 		  = $(APISDIR)
 
 REDOC		  = npx redoc-cli
-REDOCOPTS     = bundle
+REDOCOPTS     = bundle -t _redoc_templates/page.html.hsb
 
 
 # Put it first so that "make" without argument is like "make help".
@@ -30,7 +30,11 @@ help:
 redoc: $(APIDOCFILES)
 
 $(APIDOCSDIR)/%.html: %.yaml
+	@echo $@
+	@echo $<
+	$(eval SERVICEBASE=$(shell sh -c "echo '$@' | sed -Ee 's/\/[a-zA-Z0-9_\-\.]+\.html//g'"))
 	$(REDOC) $(REDOCOPTS) $< -o $@
+	cp -r _redoc_templates/content '$(SERVICEBASE)/'
 
 
 # Catch-all target: route all unknown targets to Sphinx using the new
