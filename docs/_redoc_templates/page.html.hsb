@@ -25,7 +25,8 @@
             var instance = window.dropdownNavigator = {
                 selectorId: "#navigation-host",
                 basePath: /[a-zA-Z0-9:\/\._\-]+api_html\//i,
-                options: [{
+                options: [
+                    {
                         caption: "AIMS",
                         relativePath: "aims/aims.v1.html"
                     },
@@ -69,7 +70,7 @@
             };
 
             function selectShortcut($event) {
-                if (instance.selector.selectedIndex) {
+                if (instance.selector.selectedIndex !== undefined ) {
                     let targetPath = instance.selector.options[instance.selector.selectedIndex].value;
                     let baseURL = window.location.href.match(instance.basePath);
                     if (!baseURL) {

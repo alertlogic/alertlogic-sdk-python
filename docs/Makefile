@@ -32,7 +32,7 @@ redoc: $(APIDOCFILES)
 $(APIDOCSDIR)/%.html: %.yaml
 	@echo $@
 	@echo $<
-	$(eval SERVICEBASE=$(shell sh -c "echo '_build/api_html/aims/aims.v1.html' | sed -Ee 's/\/[a-zA-Z0-9_\-\.]+\.html//g'"))
+	$(eval SERVICEBASE=$(shell sh -c "echo '$@' | sed -Ee 's/\/[a-zA-Z0-9_\-\.]+\.html//g'"))
 	$(REDOC) $(REDOCOPTS) $< -o $@
 	cp -r _redoc_templates/content '$(SERVICEBASE)/'
 
