@@ -1,58 +1,7 @@
 import textwrap
 from pypandoc import convert_text
+from almdrlib.docs.format import ServiceFormat
 from almdrlib.client import OpenAPIKeyWord
-
-CLIENT_SECTION = """
-{0}
-{1}
-{0}
-
-.. contents:: Table of Contents
-   :depth: 2
-
-"""
-
-CLASS_SECTION = """
-
-======
-Client
-======
-
-.. py:class:: {0}.Client
-
-  A client object representing '{0}' Service::
-
-
-    import almdrlib
-
-    client = almdrlib.client('{1}')
-
-  Available methods:
-
-{2}
-
-
-"""
-
-METHOD_HEADER = """
-  *   :py:meth:`~{0}.Client.{1}`
-
-
-"""
-
-METHOD_DECLARATION = """
-
-  .. py:method:: {0}(**kwargs)
-
-"""
-METHOD_DESC_INDENT = '    '
-
-REQUIRED_QUALIFIER = "**[REQUIRED]**"
-PARAM_DECLARATION = """
-
-    :type {0}: {1}
-    :param {0}: {2}"""
-PARAM_DESC_IDENTENT = '      '
 
 
 class ServiceDocGenerator(object):
@@ -78,7 +27,7 @@ class ServiceDocGenerator(object):
         section_line = '*'*len(self._service_name)
 
         # Add Header Section
-        header_section = CLIENT_SECTION.format(
+        header_section = ServiceFormat.CLIENT_SECTION.format(
                 section_line,
                 self._service_name.capitalize()
             )
@@ -86,15 +35,15 @@ class ServiceDocGenerator(object):
 
         operations = self._spec['operations']
         methods = [
-            METHOD_HEADER.format(
-                    self._service_name.capitalize(),
-                    op_name
-                )
+            ServiceFormat.METHOD_HEADER.format(
+                self._service_name.capitalize(),
+                op_name
+            )
             for op_name in operations.keys()
         ]
 
         # Add Client Section
-        class_section = CLASS_SECTION.format(
+        class_section = ServiceFormat.CLASS_SECTION.format(
                 self._service_name.capitalize(),
                 self._service_name,
                 '\n'.join(methods)
@@ -110,19 +59,32 @@ class ServiceDocGenerator(object):
         '''
         Make a secition for a method
         '''
-        self._doc.append(METHOD_DECLARATION.format(op_name))
+        indent = ServiceFormat.INDENT_INCREMENT
+        self._doc.append(
+                ServiceFormat.METHOD_DECLARATION.format(
+                    op_name,
+                    indent
+                )
+            )
+        
+        indent += ServiceFormat.INDENT_INCREMENT
         description = self._format_text(
                 op_spec.get(OpenAPIKeyWord.DESCRIPTION, ''),
-                indent=METHOD_DESC_INDENT
+                indent=indent + ServiceFormat.INDENT_INCREMENT
             )
         self._doc.append(f"\n\n{description}\n\n")
 
         # Process method parameters
         parameters = op_spec.get(OpenAPIKeyWord.PARAMETERS, {})
         for param_name, param_spec in parameters.items():
-            self._make_parameter(param_name, param_spec)
+            self._make_parameter(
+                    param_name,
+                    param_spec,
+                    format_string=ServiceFormat.PARAM_DECLARATION,
+                    indent=indent
+                )
 
-    def _make_parameter(self, param_name, param_spec):
+    def _make_parameter(self, param_name, param_spec, format_string, indent):
         '''
         Make parameter section
         '''
@@ -132,17 +94,46 @@ class ServiceDocGenerator(object):
             )
 
         self._doc.append(
-                PARAM_DECLARATION.format(
+                format_string.format(
                     param_name,
                     param_type,
-                    param_required and REQUIRED_QUALIFIER or ""
+                    param_required and ServiceFormat.REQUIRED_QUALIFIER or "",
+                    indent
                 )
             )
+
+        indent += ServiceFormat.INDENT_INCREMENT
         description = self._format_text(
                 param_spec.get(OpenAPIKeyWord.DESCRIPTION, ""),
-                indent=PARAM_DESC_IDENTENT
+                indent=indent
             )
         self._doc.append(f"{description}\n\n")
+        
+        if param_type == 'dict':
+            self._make_dict_parameter(
+                    parameters=param_spec.get(OpenAPIKeyWord.PROPERTIES, {}),
+                    indent=indent
+                )
+        elif param_spec.get(OpenAPIKeyWord.ENUM):
+            self._make_enum(param_spec[OpenAPIKeyWord.ENUM], indent)
+
+    def _make_dict_parameter(self, parameters, indent):
+        for param_name, param_spec in parameters.items():
+            self._make_parameter(
+                    param_name,
+                    param_spec,
+                    format_string=ServiceFormat.CHILD_PARAM_DECLARATION,
+                    indent=indent)
+
+    def _make_enum(self, values, indent):
+        values_indent = indent + ServiceFormat.INDENT_INCREMENT
+        self._doc.append(
+                ServiceFormat.ENUM_DECLARATION.format(
+                    ('\n' + values_indent).join(['* ' + v for v in values]),
+                    indent,
+                    values_indent
+                )
+            )
 
     def _get_param_type(self, type):
         if type == OpenAPIKeyWord.OBJECT:

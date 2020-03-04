@@ -30,6 +30,7 @@ help:
 redoc: $(APIDOCFILES)
 
 $(APIDOCSDIR)/%.html: %.yaml
+	@echo $@
 	$(REDOC) $(REDOCOPTS) $< -o $@
 
 
