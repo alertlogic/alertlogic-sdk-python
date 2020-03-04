@@ -15,8 +15,11 @@ APIDOCSDIR	  = ./$(BUILDDIR)/api_html
 APISPECFILES  := $(shell find $(APISDIR) -name '*.yaml')
 APIDOCFILES   := $(subst $(APISDIR),$(APIDOCSDIR),$(APISPECFILES:%.yaml=%.html))
 
+VPATH 		  = $(APISDIR)
+
 REDOC		  = npx redoc-cli
 REDOCOPTS     = bundle -t _redoc_templates/page.html.hsb
+
 
 # Put it first so that "make" without argument is like "make help".
 help:
@@ -26,7 +29,7 @@ help:
 
 redoc: $(APIDOCFILES)
 
-$(APIDOCSDIR)/%.html: $(APISPECFILES)
+$(APIDOCSDIR)/%.html: %.yaml
 	@echo $@
 	@echo $<
 	$(eval SERVICEBASE=$(shell sh -c "echo '_build/api_html/aims/aims.v1.html' | sed -Ee 's/\/[a-zA-Z0-9_\-\.]+\.html//g'"))
