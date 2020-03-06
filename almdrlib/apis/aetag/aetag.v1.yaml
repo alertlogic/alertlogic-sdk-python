@@ -294,7 +294,6 @@ paths:
                   type: object
                   additionalProperties: true
                   description: JSON Object with key/values to set the tag set to.
-                  additionalProperties: true
               required:
                 - tagset
             encoding:

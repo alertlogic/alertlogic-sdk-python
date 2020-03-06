@@ -1,65 +1,15 @@
+import json
 import textwrap
 from pypandoc import convert_text
+from almdrlib.docs.format import ServiceFormat
 from almdrlib.client import OpenAPIKeyWord
-
-CLIENT_SECTION = """
-{0}
-{1}
-{0}
-
-.. contents:: Table of Contents
-   :depth: 2
-
-"""
-
-CLASS_SECTION = """
-
-======
-Client
-======
-
-.. py:class:: {0}.Client
-
-  A client object representing '{0}' Service::
-
-
-    import almdrlib
-
-    client = almdrlib.client('{1}')
-
-  Available methods:
-
-{2}
-
-
-"""
-
-METHOD_HEADER = """
-  *   :py:meth:`~{0}.Client.{1}`
-
-
-"""
-
-METHOD_DECLARATION = """
-
-  .. py:method:: {0}(**kwargs)
-
-"""
-METHOD_DESC_INDENT = '    '
-
-REQUIRED_QUALIFIER = "**[REQUIRED]**"
-PARAM_DECLARATION = """
-
-    :type {0}: {1}
-    :param {0}: {2}"""
-PARAM_DESC_IDENTENT = '      '
 
 
 class ServiceDocGenerator(object):
     def __init__(self,
                  service_name,
                  spec,
-                 width=80,
+                 width=256,
                  indent_increment=2):
         self._width = width
         self._indent_increment = indent_increment
@@ -78,7 +28,7 @@ class ServiceDocGenerator(object):
         section_line = '*'*len(self._service_name)
 
         # Add Header Section
-        header_section = CLIENT_SECTION.format(
+        header_section = ServiceFormat.CLIENT_SECTION.format(
                 section_line,
                 self._service_name.capitalize()
             )
@@ -86,15 +36,15 @@ class ServiceDocGenerator(object):
 
         operations = self._spec['operations']
         methods = [
-            METHOD_HEADER.format(
-                    self._service_name.capitalize(),
-                    op_name
-                )
+            ServiceFormat.METHOD_HEADER.format(
+                self._service_name.capitalize(),
+                op_name
+            )
             for op_name in operations.keys()
         ]
 
         # Add Client Section
-        class_section = CLASS_SECTION.format(
+        class_section = ServiceFormat.CLASS_SECTION.format(
                 self._service_name.capitalize(),
                 self._service_name,
                 '\n'.join(methods)
@@ -110,19 +60,93 @@ class ServiceDocGenerator(object):
         '''
         Make a secition for a method
         '''
-        self._doc.append(METHOD_DECLARATION.format(op_name))
+
+        # Declare method
+        indent = ServiceFormat.INDENT_INCREMENT
+        self._doc.append(
+                ServiceFormat.METHOD_DECLARATION.format(
+                    op_name,
+                    indent
+                )
+            )
+        
+        # Add method description
+        indent += ServiceFormat.INDENT_INCREMENT
         description = self._format_text(
                 op_spec.get(OpenAPIKeyWord.DESCRIPTION, ''),
-                indent=METHOD_DESC_INDENT
+                indent=indent + ServiceFormat.INDENT_INCREMENT,
+                format='md'
             )
         self._doc.append(f"\n\n{description}\n\n")
 
-        # Process method parameters
+        # Add method request syntax
         parameters = op_spec.get(OpenAPIKeyWord.PARAMETERS, {})
-        for param_name, param_spec in parameters.items():
-            self._make_parameter(param_name, param_spec)
 
-    def _make_parameter(self, param_name, param_spec):
+        self._make_request_syntax(
+                name=op_name,
+                parameters=parameters,
+                indent=indent+ServiceFormat.INDENT_INCREMENT)
+
+        # Process method parameters
+        for param_name, param_spec in parameters.items():
+            self._make_parameter(
+                    param_name,
+                    param_spec,
+                    format_string=ServiceFormat.PARAM_DECLARATION,
+                    indent=indent
+                )
+
+    def _make_request_syntax(self, name, parameters, indent):
+        self._doc.append(ServiceFormat.REQUEST_SYNTAX_HEADER.format(indent))
+        indent += ServiceFormat.INDENT_INCREMENT
+        request_params = self._make_request_spec(parameters, indent)
+
+        self._doc.append(
+            ServiceFormat.REQUEST_SYNTAX_DECLARATION.format(
+                name,
+                request_params,
+                indent
+            )
+        )
+
+
+    def _make_request_spec(self, parameters, indent):
+        indent += ServiceFormat.INDENT_INCREMENT*2
+        request_spec = [
+            f"{indent}{ServiceFormat.INDENT_INCREMENT}{param_name}={self._get_param_spec(param_spec, indent)}"
+            for param_name, param_spec in parameters.items()
+        ]
+        return '\n'.join(request_spec).replace('"', "'").replace("''", "'")
+
+    def _get_param_spec(self, spec, indent):
+        param_type = spec.get(OpenAPIKeyWord.TYPE, OpenAPIKeyWord.STRING)
+        if param_type == OpenAPIKeyWord.OBJECT:
+            return self._get_dict_param_spec(
+                    spec.get(OpenAPIKeyWord.PROPERTIES, {}),
+                    indent)
+        elif param_type == OpenAPIKeyWord.BOOLEAN:
+            return "True|False"
+        else:
+            enum = spec.get(OpenAPIKeyWord.ENUM)
+            if enum:
+                return '|'.join(f"'{v}'" for v in enum)
+            else:
+                return f"'{param_type}'"
+
+    def _get_dict_param_spec(self, properties, indent):
+        indent += ServiceFormat.INDENT_INCREMENT
+        res = {
+                name: self._get_param_spec(value, indent) 
+                for name, value in properties.items()
+        }
+
+        return self._format_text(
+                json.dumps(res, sort_keys=True, indent=4),
+                separator='\n' + indent
+            )
+                
+
+    def _make_parameter(self, param_name, param_spec, format_string, indent):
         '''
         Make parameter section
         '''
@@ -132,17 +156,47 @@ class ServiceDocGenerator(object):
             )
 
         self._doc.append(
-                PARAM_DECLARATION.format(
+                format_string.format(
                     param_name,
                     param_type,
-                    param_required and REQUIRED_QUALIFIER or ""
+                    param_required and ServiceFormat.REQUIRED_QUALIFIER or "",
+                    indent
                 )
             )
+
+        indent += ServiceFormat.INDENT_INCREMENT
         description = self._format_text(
                 param_spec.get(OpenAPIKeyWord.DESCRIPTION, ""),
-                indent=PARAM_DESC_IDENTENT
+                indent=indent,
+                format='md'
             )
         self._doc.append(f"{description}\n\n")
+        
+        if param_type == 'dict':
+            self._make_dict_parameter(
+                    parameters=param_spec.get(OpenAPIKeyWord.PROPERTIES, {}),
+                    indent=indent
+                )
+        elif param_spec.get(OpenAPIKeyWord.ENUM):
+            self._make_enum(param_spec[OpenAPIKeyWord.ENUM], indent)
+
+    def _make_dict_parameter(self, parameters, indent):
+        for param_name, param_spec in parameters.items():
+            self._make_parameter(
+                    param_name,
+                    param_spec,
+                    format_string=ServiceFormat.CHILD_PARAM_DECLARATION,
+                    indent=indent)
+
+    def _make_enum(self, values, indent):
+        values_indent = indent + ServiceFormat.INDENT_INCREMENT
+        self._doc.append(
+                ServiceFormat.ENUM_DECLARATION.format(
+                    ('\n' + values_indent).join(['* ' + v for v in values]),
+                    indent,
+                    values_indent
+                )
+            )
 
     def _get_param_type(self, type):
         if type == OpenAPIKeyWord.OBJECT:
@@ -150,11 +204,13 @@ class ServiceDocGenerator(object):
         else:
             return type
 
-    def _format_text(self, text, indent='', subsequent_indent=None):
+    def _format_text(
+            self, text,
+            indent='', subsequent_indent=None, separator='\n', format=None):
         '''
         Convert text from md to rst.
         '''
-        conv_text = convert_text(text, 'rst', format='md')
+        conv_text = format and convert_text(text, 'rst', format=format) or text
         if not subsequent_indent:
             subsequent_indent = indent
 
@@ -166,4 +222,4 @@ class ServiceDocGenerator(object):
                     subsequent_indent=subsequent_indent)
             for str in conv_text.splitlines()
         ]
-        return '\n'.join(res)
+        return separator.join(res)

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf8" />
+    <title>{{title}}</title>
+    <!-- needed for adaptive design -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            padding: 0;
+            margin: 0;
+        }
+    </style>
+    {{{redocHead}}}
+    {{#unless disableGoogleFont}}
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans&display=swap" rel="stylesheet">
+    <link href="content/custom.css" rel="stylesheet">
+    {{/unless}}
+    <script type="text/javascript">
+        "use strict";
+
+        (function () {
+            var instance = window.dropdownNavigator = {
+                selectorId: "#navigation-host",
+                basePath: /[a-zA-Z0-9:\/\._\-]+api_html\//i,
+                options: [
+                    {
+                        caption: "AIMS",
+                        relativePath: "aims/aims.v1.html"
+                    },
+                    {
+                        caption: "AEFR",
+                        relativePath: "aefr/aefr.v1.html"
+                    },
+                    {
+                        caption: "AETag",
+                        relativePath: "aetag/aetag.v1.html"
+                    },
+                    {
+                        caption: "AETuner",
+                        relativePath: "aetuner/aetuner.v1.html"
+                    },
+                    {
+                        caption: "Assets (Query)",
+                        relativePath: "assets_query/assets_query.v1.html"
+                    },
+                    {
+                        caption: "Credentials",
+                        relativePath: "credentials/credentials.v2.html"
+                    },
+                    {
+                        caption: "Deployments",
+                        relativePath: "deployments/deployments.v1.html"
+                    },
+                    {
+                        caption: "Policies",
+                        relativePath: "policies/policies.v1.html"
+                    },
+                    {
+                        caption: "Search",
+                        relativePath: "search/search.v2.html"
+                    },
+                    {
+                        caption: "Themis",
+                        relativePath: "themis/themis.v1.html"
+                    }
+                ]
+            };
+
+            function selectShortcut($event) {
+                if (instance.selector.selectedIndex !== undefined ) {
+                    let targetPath = instance.selector.options[instance.selector.selectedIndex].value;
+                    let baseURL = window.location.href.match(instance.basePath);
+                    if (!baseURL) {
+                        console.warn("Warning: could not determine a base URL to redirect relative to.");
+                        return;
+                    }
+                    let targetURL = baseURL[0] + targetPath;
+                    window.location.href = targetURL;
+                }
+            }
+
+            function instantiate() {
+                var hostElement = document.querySelector(instance.selectorId);
+                if (!hostElement) {
+                    console.warn("Warning: could not find #dropdown-navigator-host element.");
+                    return;
+                }
+                var container = document.createElement("div");
+                var select = instance.selector = document.createElement("select");
+                container.appendChild(select);
+                select.addEventListener("change", selectShortcut);
+                select.classList.add("menu");
+                for (var i = 0; i < instance.options.length; i++) {
+                    var option = instance.options[i];
+                    var oel = document.createElement("option");
+                    oel.value = option.relativePath;
+                    oel.text = option.caption;
+                    oel.selected = window.location.href.indexOf(option.relativePath) >= 0 ? true : false;
+                    select.appendChild(oel);
+                }
+
+                hostElement.appendChild(container);
+            }
+
+            document.addEventListener("DOMContentLoaded", instantiate);
+
+        })();
+    </script>
+</head>
+
+<body>
+    <div class="header"><a href="#"><img src="content/AlertLogic_Logo_White.png" alt="Alert Logic logo" class="logo"></a>
+        
+    </div><div id="navigation-host"></div>
+    {{{redocHTML}}}
+</body>
+
+</html>
