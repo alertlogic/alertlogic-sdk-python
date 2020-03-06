@@ -18,3 +18,6 @@ You may also install a specific version::
 
    The latest development version can always be found on
    `GitHub <https://github.com/alertlogic/alertlogic-sdk-python>`_.
+
+   Published version can be found on
+   `PyPI <https://pypi.org/project/alertlogic-sdk-python>`_.
