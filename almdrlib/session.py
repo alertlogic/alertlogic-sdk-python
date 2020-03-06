@@ -238,7 +238,7 @@ class Session():
         operations = {}
         for op_name, operation in client.operations.items():
             operations[op_name] = operation.get_schema()
-        model.update({'operations': operations})
+        model.update({'operations': dict(sorted(operations.items()))})
         return model
 
     @property

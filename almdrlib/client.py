@@ -14,6 +14,7 @@ import logging
 import pprint
 import yaml
 import json
+
 from almdrlib.exceptions import AlmdrlibValueError
 from almdrlib.config import Config
 
@@ -440,7 +441,7 @@ class Operation(object):
                 params_schema.update(schema.get(OpenAPIKeyWord.PROPERTIES))
 
         result.update({
-            OpenAPIKeyWord.PARAMETERS: params_schema
+            OpenAPIKeyWord.PARAMETERS: dict(sorted(params_schema.items()))
         })
         return result
 
