@@ -38,7 +38,7 @@ paths:
                 type: object
       operationId: list_analytics
       security:
-        - aims_request_authorizer: []
+        - X-AIMS-Auth-Token: []
       description: List anayltics for an account
       x-amazon-apigateway-integration:
         uri:
@@ -81,7 +81,7 @@ paths:
           description: OK
       operationId: get_analytic
       security:
-        - aims_request_authorizer: []
+        - X-AIMS-Auth-Token: []
       description: Returns an analytic for a specific customer
       x-amazon-apigateway-integration:
         uri:
@@ -106,7 +106,7 @@ paths:
         '201':
           description: Created
       security:
-        - aims_request_authorizer: []
+        - X-AIMS-Auth-Token: []
       requestBody:
         content:
           application/json:
@@ -138,7 +138,7 @@ paths:
           'Fn::Sub': 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AETunerUpdateAnalyticFunction.Arn}/invocations'
 components:
   securitySchemes:
-    aims_request_authorizer:
+    X-AIMS-Auth-Token:
       type: apiKey
       name: X-AIMS-Auth-Token
       in: header

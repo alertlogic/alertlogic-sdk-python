@@ -38,6 +38,18 @@ Client
 
     """
 
+    REQUEST_SYNTAX_HEADER = """
+{0}**Request Syntax**
+{0}::
+
+    """
+
+    REQUEST_SYNTAX_DECLARATION = """
+{2}response = client.{0}(
+{1}
+{2})
+    """
+
     METHOD_DECLARATION = """
 
 {1}.. py:method:: {0}(**kwargs)
