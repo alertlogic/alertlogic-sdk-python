@@ -18,8 +18,11 @@
 # absolute, like shown here.
 #
 import os
+import logging
 import almdrlib
 from almdrlib.docs import make_documentation
+
+almdrlib.set_logger('almdrlib', logging.INFO)
 make_documentation(os.path.dirname(os.path.abspath(__file__)))
 
 #import sys
@@ -35,7 +38,6 @@ make_documentation(os.path.dirname(os.path.abspath(__file__)))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
     'sphinx.ext.autodoc'
-    # 'sphinx_rtd_theme'
     ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -109,6 +111,8 @@ html_static_path = ['_static']
 
 # These paths are either relative to html_static_path
 # or fully qualified paths (eg. https://...)
+
+html_logo = "AlertLogic_Logo_White.png"
 
 html_css_files = [
     'css/custom.css'
