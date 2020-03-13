@@ -8,12 +8,18 @@
 
 import os
 import glob
+import io
+import abc
 # import typing
 # import inspect
 import logging
 import pprint
 import yaml
 import json
+import collections
+import jsonschema
+from jsonschema.validators import validator_for
+from functools import reduce
 
 from almdrlib.exceptions import AlmdrlibValueError
 from almdrlib.config import Config
@@ -48,6 +54,7 @@ class OpenAPIKeyWord:
     TYPE = "type"
     STRING = "string"
     OBJECT = "object"
+    ITEMS = "items"
     ALL_OF = "allOf"
     ONE_OF = "oneOf"
     ANY_OF = "anyOf"
@@ -55,6 +62,7 @@ class OpenAPIKeyWord:
     INTEGER = "integer"
     ARRAY = "array"
     NUMBER = "number"
+    FORMAT = "format"
     ENUM = "enum"
     SECURITY = "security"
     COMPONENTS = "components"
@@ -65,6 +73,7 @@ class OpenAPIKeyWord:
     DEFAULT = "default"
     ENCODING = "encoding"
     EXPLODE = "explode"
+    DATA = "data"
     CONTENT_TYPE_PARAM = "content-type"
     CONTENT_TYPE_JSON = "application/json"
     CONTENT_TYPE_TEXT = "text/plain"
@@ -72,15 +81,13 @@ class OpenAPIKeyWord:
 
     JSON_CONTENT_TYPES = ["application/json", "alertlogic.com/json"]
 
-    SIMPLE_DATA_TYPES = [STRING, ARRAY, BOOLEAN, INTEGER, NUMBER]
+    SIMPLE_DATA_TYPES = [STRING, BOOLEAN, INTEGER, NUMBER]
     DATA_TYPES = [STRING, OBJECT, ARRAY, BOOLEAN, INTEGER, NUMBER]
-    SUPPORTED_PAYLOAD_TYPES = [OBJECT, REF]
-    INDIRECT_TYPES = [ALL_OF, ANY_OF, ONE_OF]
+    INDIRECT_TYPES = [ANY_OF, ONE_OF]
 
     # Alert Logic specific extensions
     X_ALERTLOGIC_SCHEMA = "x-alertlogic-schema"
     X_ALERTLOGIC_SESSION_ENDPOINT = "x-alertlogic-session-endpoint"
-    X_ALERTLOGIC_DEFAULT_PAYLOAD_PARAM_NAME = "data"
 
 
 logger = logging.getLogger(__name__)
@@ -123,15 +130,28 @@ class Server(object):
         self._url = url
 
 
-class RequestBodySimpleParameter(object):
-    def __init__(self, name, schema, required, session):
+class RequestBodyParameter(object):
+    def __init__(self, name, schema, required=False, session=None):
         self._name = name
         self._schema = schema
         self._required = required
         self._session = session
 
-    def serialize(self, value, header=None):
-        return {'data': value}
+        validator_cls = validator_for(schema)
+        validator_cls.check_schema(schema)
+        self._validator = validator_cls(schema)
+
+    @abc.abstractmethod
+    def serialize(self, value, header=[]):
+        """ Derived classes handle serialization """
+        return
+
+    def validate(self, data):
+        try:
+            self._validator.validate(data)
+        except jsonschema.exceptions.ValidationError as e:
+            raise AlmdrlibValueError(
+                    f"{e.message}. Schema: {json.dumps(e.schema)}")
 
     @property
     def name(self):
@@ -143,40 +163,75 @@ class RequestBodySimpleParameter(object):
 
     @property
     def schema(self):
-        return self._schema
+        return {
+            self._name: self._schema
+        }
 
 
-class RequestBodyObjectParameter(object):
+class RequestBodySchemaParameter(RequestBodyParameter):
+    def __init__(self, name, schema, required=False, session=None):
+        super().__init__(name, schema, required, session)
+
+    def serialize(self, kwargs, header=[]):
+        # TODO: Add validation
+        data = kwargs.pop(self.name, {})
+        self.validate(data)
+        kwargs['data'] = json.dumps(data)
+
+
+class RequestBodySimpleParameter(RequestBodyParameter):
+    def __init__(self, name, schema, required=False, session=None):
+        super().__init__(name, schema, required, session)
+
+    def serialize(self, kwargs, header=None):
+        kwargs['data'] = kwargs.pop(self._name, "")
+
+
+class RequestBodyObjectParameter(RequestBodyParameter):
     def __init__(self,
                  name,
                  schema,
                  encoding=None,
                  required=False,
                  session=None):
-        self._name = name
-        self._required = required
-        self._schema = schema
-        self._schema[OpenAPIKeyWord.REQUIRED] = required
+        super().__init__(name, schema, required, session)
+
+        self._schema = self._normilize_body_schema(schema)
         self._encoding = encoding
-        self._session = session
+        self._explode = encoding and encoding.get(
+                                        OpenAPIKeyWord.EXPLODE, False)
 
-    def serialize(self, value, headers=None):
-        if self._encoding and self._encoding.get(OpenAPIKeyWord.EXPLODE):
-            return value
+        self._required_properties = self._schema.get(
+                                        OpenAPIKeyWord.REQUIRED, [])
+        self._properties = self._schema.get(OpenAPIKeyWord.PROPERTIES, [])
+
+    def _normilize_body_schema(self, schema):
+        return schema
+
+    def serialize(self, kwargs, headers=None):
+        if not all(name in kwargs for name in self._required_properties):
+            raise AlmdrlibValueError(
+                f"'{self._required_properties}' parameters are required. " +
+                f"'{kwargs}' were provided.")
+
+        result = {
+                    k: kwargs.pop(k)
+                    for k in self._properties.keys() if k in kwargs
+                }
+
+        if self.required and not bool(result):
+            raise AlmdrlibValueError(
+                "At least one the " +
+                f"{self._properties.keys()} parameters must be specified."
+            )
+        if self._explode:
+            kwargs['data'] = json.dumps(result)
         else:
-            return {self._name: value}
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def required(self):
-        return self._required
+            kwargs['data'] = json.dumps({self._name: result})
 
     @property
     def schema(self):
-        return self._schema
+        return self._schema.get(OpenAPIKeyWord.PROPERTIES, {})
 
 
 class RequestBody(object):
@@ -188,40 +243,36 @@ class RequestBody(object):
         self._content = {}
         self._default_content_type = None
 
-    def add_content(self, content_type, schema, encoding):
-        request_properties = {}
-        datatype = schema[OpenAPIKeyWord.TYPE]
+    def add_content(self, content_type, schema, al_schema, encoding):
+        if not schema:
+            return
+
+        datatype = schema.get(OpenAPIKeyWord.TYPE)
+        name = al_schema.get(OpenAPIKeyWord.NAME, OpenAPIKeyWord.DATA)
         if datatype == OpenAPIKeyWord.OBJECT:
-            schema_properties = schema.get(OpenAPIKeyWord.PROPERTIES, [])
-            required_properties = schema.get(OpenAPIKeyWord.REQUIRED, [])
-            request_properties = {
-                prop_name: RequestBodyObjectParameter(
-                        name=prop_name,
-                        schema=prop_schema,
-                        encoding=encoding.get(prop_name),
-                        required=prop_name in required_properties,
-                        session=self._session
-                    )
-                for prop_name, prop_schema in schema_properties.items()
-            }
+            parameter = RequestBodyObjectParameter(
+                            name=name,
+                            schema=schema,
+                            encoding=encoding.get('data'),
+                            required=self._required,
+                            session=self._session
+                        )
         elif datatype in OpenAPIKeyWord.SIMPLE_DATA_TYPES:
-            prop_name = schema.get(
-                    OpenAPIKeyWord.NAME,
-                    OpenAPIKeyWord.X_ALERTLOGIC_DEFAULT_PAYLOAD_PARAM_NAME)
-
-            request_properties = {
-                prop_name: RequestBodySimpleParameter(
-                        name=prop_name,
-                        schema=schema,
-                        required=self._required,
-                        session=self._session
-                    )
-            }
+            parameter = RequestBodySimpleParameter(
+                            name=name,
+                            schema=schema,
+                            required=self._required,
+                            session=self._session
+                        )
         else:
-            raise AlmdrlibValueError(
-                    f"'{datatype}' is invalid for requestBody property")
+            parameter = RequestBodySchemaParameter(
+                            name=name,
+                            schema=schema,
+                            required=self._required,
+                            session=self._session
+                        )
 
-        self._content[content_type] = request_properties
+        self._content[content_type] = parameter
 
     def serialize(self, headers, kwargs):
         #
@@ -229,56 +280,22 @@ class RequestBody(object):
         #
         if OpenAPIKeyWord.CONTENT_TYPE_PARAM in headers:
             content_type = headers[OpenAPIKeyWord.CONTENT_TYPE_PARAM]
-            content = self._content[content_type]
+            payloadBodyParam = self._content[content_type]
         elif len(self._content) == 1:
-            content_type, content = next(iter(self._content.items()))
+            content_type, payloadBodyParam = next(iter(self._content.items()))
             headers[OpenAPIKeyWord.CONTENT_TYPE_PARAM] = content_type
         else:
             raise AlmdrlibValueError(
                 f"'{OpenAPIKeyWord.CONTENT_TYPE_PYTHON_PARAM}'" +
                 "parameter is required.")
 
-        # Get required properties list
-        # and make sure all of them are present in kwargs
-        required = self._get_required_properties(content)
-        if not all(name in kwargs for name in required):
-            raise AlmdrlibValueError(
-                f"'{required}' parameters are required. " +
-                f"'{kwargs}' were provided.")
-
-        result = {}
-        for name, property in content.items():
-            if name in kwargs:
-                result.update(property.serialize(value=kwargs.pop(name)))
-
-        if content_type in OpenAPIKeyWord.JSON_CONTENT_TYPES:
-            kwargs['data'] = json.dumps(result)
-        else:
-            kwargs['data'] = next(iter(result.values()))
+        payloadBodyParam.serialize(kwargs, headers)
 
     def get_schema(self):
-        content_count = len(self._content)
-        if content_count == 1:
-            content = next(iter(self._content.values()))
-            return {
-                OpenAPIKeyWord.PROPERTIES: self._get_content_schema(content)
-            }
-        elif content_count:
-            #
-            # Content Type is a required property
-            # when number of content types is greater than 0
-            #
-            return {
-                OpenAPIKeyWord.CONTENT: {
-                    content_type: {
-                        OpenAPIKeyWord.PROPERTIES: self._get_content_schema(
-                                                            content),
-                    }
-                    for content_type, content in self._content.items()
-                }
-            }
-        else:
-            return {}
+        payloadBodyParam = next(iter(self._content.values()))
+        return {
+            OpenAPIKeyWord.PROPERTIES: payloadBodyParam.schema
+        }
 
     def _get_content_schema(self, content):
         return {name: property.schema for name, property in content.items()}
@@ -374,7 +391,7 @@ class Operation(object):
 
     def __init__(self,
                  path,
-                 ref,
+                 # ref,
                  params,
                  summary,
                  description,
@@ -383,7 +400,7 @@ class Operation(object):
                  session=None,
                  server=None):
         self._path = path
-        self._ref = ref
+        # self._ref = ref
         self._params = params
         self._summary = summary
         self._description = description
@@ -482,9 +499,6 @@ class Operation(object):
             self._call = self._gen_call()
         return self._call(*args, **kwargs)
 
-    def help(self):
-        return pprint.pprint(self.spec, indent=2)
-
     def __repr__(self):
         return f"<{type(self).__name__}: [{self._method}] {self._path}>"
 
@@ -523,7 +537,18 @@ class Client(object):
         logger.debug(
             f"Initializing client for '{self._name}'" +
             f"Spec: '{service_spec_file}' Variables: '{variables}'")
-        spec = load_spec_from_file(service_spec_file)
+
+        #
+        # Load spec file
+        #
+        spec = _get_spec(service_spec_file)
+
+        #
+        # Resolve `#ref` references
+        # Normalize spec for easier processing
+        #
+        _normalize_spec(service_spec_file, spec)
+
         self.load_spec(spec, variables)
 
     @property
@@ -601,17 +626,6 @@ class Client(object):
     def _initialize_operations(self):
         self._operations = {}
         for path, path_spec in self.paths.items():
-            # TODO: Add ref handler
-            ref = path_spec.pop(OpenAPIKeyWord.REF, "")
-
-            params = [
-                PathParameter(
-                    spec=param_spec,
-                    session=self._session
-                )
-                for param_spec in path_spec.pop(OpenAPIKeyWord.PARAMETERS, [])
-            ]
-
             for method, op_spec in path_spec.items():
                 operation_id = op_spec.get(OpenAPIKeyWord.OPERATION_ID)
                 summary = op_spec.pop(OpenAPIKeyWord.SUMMARY, "")
@@ -624,153 +638,49 @@ class Client(object):
                     )
                     continue
 
-                params.extend([
-                    PathParameter(
-                        spec=param_spec,
-                        session=self._session
-                    )
-                    for param_spec in op_spec.get(OpenAPIKeyWord.PARAMETERS,
-                                                  [])
-                ])
+                params = [
+                    PathParameter(spec=s, session=self._session)
+                    for s in op_spec.get(OpenAPIKeyWord.PARAMETERS, [])
+                ]
 
+                # Initialize operation's body
                 body = self._initalize_request_body(
                         op_spec.pop(OpenAPIKeyWord.REQUEST_BODY, None))
 
-                if operation_id not in self._operations:
-                    self._operations[operation_id] = Operation(
-                        path,
-                        ref,
-                        params,
-                        summary,
-                        description,
-                        method,
-                        op_spec,
-                        body,
-                        session=self._session,
-                        server=self._server
-                    )
-                else:
-                    v = self._operations[operation_id]
-                    if type(v) is not list:
-                        self._operations[operation_id] = [v]
-                    self._operations[operation_id].append(
-                        Operation(
-                            path,
-                            ref,
-                            params,
-                            summary,
-                            description,
-                            method,
-                            op_spec,
-                            body,
-                            session=self._session,
-                            server=self._server
-                        )
-                    )
+                if operation_id in self._operations:
+                    raise AlmdrlibValueError(f"Duplication {operation_id} \
+                                       specified for {self._name} API")
+                self._operations[operation_id] = Operation(
+                    path,
+                    params,
+                    summary,
+                    description,
+                    method,
+                    op_spec,
+                    body,
+                    session=self._session,
+                    server=self._server
+                )
 
     def _initalize_request_body(self, body_spec=None):
+        ''' Initilize request body content & parameters'''
         if not body_spec:
             return None
 
+        request_body = RequestBody(
+                required=body_spec.pop(OpenAPIKeyWord.REQUIRED, False),
+                description=body_spec.pop(OpenAPIKeyWord.DESCRIPTION, None),
+                session=self._session)
+
         content = body_spec.pop(OpenAPIKeyWord.CONTENT, {})
-        description = body_spec.pop(OpenAPIKeyWord.DESCRIPTION, None)
-        required = body_spec.pop(OpenAPIKeyWord.REQUIRED, False)
-        request_body = RequestBody(required=required,
-                                   description=description,
-                                   session=self._session)
-
         for content_type, content_schema in content.items():
-            schema = content_schema.get(OpenAPIKeyWord.SCHEMA)
-            al_schema = content_schema.get(OpenAPIKeyWord.X_ALERTLOGIC_SCHEMA)
-            encoding = content_schema.pop(OpenAPIKeyWord.ENCODING, {})
-            request_body.add_content(content_type,
-                                     self._expand_schema(schema, al_schema),
-                                     encoding)
-
+            request_body.add_content(
+                    content_type,
+                    content_schema.pop(OpenAPIKeyWord.SCHEMA),
+                    content_schema.pop(OpenAPIKeyWord.X_ALERTLOGIC_SCHEMA, {}),
+                    content_schema.pop(OpenAPIKeyWord.ENCODING, {})
+            )
         return request_body
-
-    def _expand_schema(self, schema, al_schema=None):
-        if not schema:
-            return None
-
-        ref = schema.get(OpenAPIKeyWord.REF)
-        if ref:
-            # Get Model schema
-            return self._expand_schema(self._get_model_reference(ref),
-                                       al_schema)
-
-        datatype = schema.get(OpenAPIKeyWord.TYPE)
-        if datatype not in OpenAPIKeyWord.DATA_TYPES:
-            raise AlmdrlibValueError(f"Invalid {datatype} data type \
-                                       specified for {self._name} API")
-
-        if datatype in OpenAPIKeyWord.SIMPLE_DATA_TYPES:
-            if al_schema:
-                #
-                # Add parameter name field to the schema
-                #
-                schema['name'] = al_schema.get(
-                        OpenAPIKeyWord.NAME,
-                        OpenAPIKeyWord.X_ALERTLOGIC_DEFAULT_PAYLOAD_PARAM_NAME
-                        )
-            return schema
-
-        result = {}
-        for key, value in schema.items():
-            if key == OpenAPIKeyWord.PROPERTIES:
-                # Process OpenAPI defined properties
-                properties = {}
-                for prop_name, prop_schema in value.items():
-                    ref = prop_schema.get(OpenAPIKeyWord.REF)
-                    if ref:
-                        #
-                        # Resolve model reference
-                        #
-                        properties[prop_name] = self._expand_schema(
-                                self._get_model_reference(ref),
-                                al_schema)
-                        result[key] = properties
-                        continue
-
-                    datatype = prop_schema.get(OpenAPIKeyWord.TYPE)
-                    if datatype in OpenAPIKeyWord.SIMPLE_DATA_TYPES:
-                        properties[prop_name] = prop_schema
-                    elif datatype == OpenAPIKeyWord.OBJECT:
-                        properties[prop_name] = self._expand_schema(
-                                                            prop_schema,
-                                                            al_schema)
-                    else:
-                        alternate_type, alternate_schemas = next(
-                                                    iter(prop_schema.items()))
-
-                        if alternate_type in OpenAPIKeyWord.INDIRECT_TYPES:
-                            properties[prop_name] = {
-                                alternate_type: [
-                                    self._expand_schema(alternate_schema,
-                                                        al_schema)
-                                    for alternate_schema in alternate_schemas
-                                ]
-                            }
-                        else:
-                            raise AlmdrlibValueError(
-                                f"Invalid schema for '{self._name}' API's. \
-                                  Property: '{prop_name}'. \
-                                  Datatype: '{datatype}'")
-
-                result[key] = properties
-            else:
-                # Add OpenAPI keys and values
-                result[key] = value
-
-        return result
-
-    def _get_model_reference(self, ref):
-        # Get model object definitions
-        if ref and ref[:2] == '#/':
-            return get_dict_value(self._spec, ref[2:].split('/'))
-
-        # TODO: Handle External File References
-        return None
 
     def __getattr__(self, op_name):
         if op_name in self._operations:
@@ -780,10 +690,86 @@ class Client(object):
         )
 
 
-def load_spec_from_file(file_path):
-    with open(file_path) as f:
-        s = f.read()
-    return yaml.load(s, Loader=yaml.SafeLoader)
+#
+# Dictionaries don't preserve the order. However, we want to guarantee
+# that loaded yaml files are in the exact same order to, at least
+# produce the documentation that matches spec's order
+#
+class _YamlOrderedLoader(yaml.SafeLoader):
+    pass
+
+
+_YamlOrderedLoader.add_constructor(
+    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+    lambda loader, node: collections.OrderedDict(loader.construct_pairs(node))
+)
+
+
+def _get_spec(file_path, encoding=None):
+    with io.open(file_path, 'rt', encoding=encoding) as stream:
+        return yaml.load(stream, _YamlOrderedLoader)
+
+
+def _resolve_refs(file_uri, spec):
+    ''' Resolve all schema references '''
+    resolver = jsonschema.RefResolver(file_uri, spec)
+
+    def _do_resolve(node):
+        if isinstance(node, collections.abc.Mapping) \
+                and OpenAPIKeyWord.REF in node:
+            with resolver.resolving(node[OpenAPIKeyWord.REF]) as resolved:
+                return resolved
+        elif isinstance(node, collections.abc.Mapping):
+            for k, v in node.items():
+                node[k] = _do_resolve(v)
+            _normalize_node(node)
+        elif isinstance(node, (list, tuple)):
+            for i in range(len(node)):
+                node[i] = _do_resolve(node[i])
+
+        return node
+
+    return _do_resolve(spec)
+
+
+def _normalize_node(node):
+    if OpenAPIKeyWord.ALL_OF in node:
+        update_dict_no_replace(
+            node,
+            dict(reduce(deep_merge, node.pop(OpenAPIKeyWord.ALL_OF)))
+        )
+
+
+def _normalize_spec(spec_file_path, spec):
+    # Resolve all #ref in the spec file
+    # spec_file_path must be absolute path to the spec file
+    uri = f"file://{spec_file_path}"
+    spec = _resolve_refs(uri, spec)
+
+    for path in spec[OpenAPIKeyWord.PATHS].values():
+        parameters = path.pop(OpenAPIKeyWord.PARAMETERS, [])
+        for method in path.values():
+            method.setdefault(OpenAPIKeyWord.PARAMETERS, [])
+            method[OpenAPIKeyWord.PARAMETERS].extend(parameters)
+
+
+def deep_merge(target, source):
+    # Merge source into the target
+    for k in set(target.keys()).union(source.keys()):
+        if k in target and k in source:
+            if isinstance(target[k], dict) and isinstance(source[k], dict):
+                yield (k, dict(deep_merge(target[k], source[k])))
+            elif type(target[k]) is list and type(source[k]) is list:
+                # TODO: Handle arrays of objects
+                yield (k, list(set(target[k] + source[k])))
+            else:
+                # If one of the values is not a dict,
+                # value from target dict overrides the one in source
+                yield (k, target[k])
+        elif k in target:
+            yield (k, target[k])
+        else:
+            yield (k, source[k])
 
 
 def get_dict_value(dict, list, default=None):
@@ -797,6 +783,12 @@ def get_dict_value(dict, list, default=None):
     except (KeyError, TypeError):
         return default
     return default
+
+
+def update_dict_no_replace(target, source):
+    for key in source.keys():
+        if key not in target:
+            target[key] = source[key]
 
 
 def serialize_value(datatype, value):
