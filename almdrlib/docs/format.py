@@ -71,4 +71,3 @@ Client
 """
 
     INDENT_INCREMENT = '  '
-
