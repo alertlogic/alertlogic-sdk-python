@@ -18,7 +18,8 @@ with open('README.md') as readme_file:
 requirements = [
         'requests>=2.18',
         'configparser>=4.0.2',
-        'pyyaml==5.1.2'
+        'pyyaml==5.1.2',
+        'jsonschema[format_nongpl]==3.2.0'
     ]
 
 test_requirements = [ ]
@@ -55,7 +56,8 @@ setup(
             'pytest>=3',
             'mock>=2.0.0',
             'httpretty>=0.8.14',
-            'pycodestyle>=2.3.1'
+            'pycodestyle>=2.3.1',
+            'jsonschema[format_nongpl]==3.2.0'
         ],
     },
     keywords=['alertlogic-sdk', 'alertlogic-sdk-python', 'alertlogic-mdr-sdk', 'almdrlib', 'alertlogic']

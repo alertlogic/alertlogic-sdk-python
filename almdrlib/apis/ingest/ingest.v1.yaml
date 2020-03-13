@@ -1,0 +1,340 @@
+openapi: 3.0.2
+info:
+  title: Ingest Service
+  version: '1.0'
+  description: |-
+    The ingest service is a multi-region IWS web service that receives Alertlogic customer data and routes it to any number of destinations including:
+
+    Real-Time Export (RTE) json data sent to kinesis streams for
+    processing by internal teams for Alertlogic products
+    use by customers for custom value add
+    The daccess service for long-term storage and search
+  contact:
+    name: Alert Logic Support
+    email: support@alertlogic.com
+servers:
+  - url: 'https://api.cloudinsight.alertlogic.com'
+    description: production
+    x-alertlogic-session-endpoint: true
+  - url: 'https://api.cloudinsight.product.dev.alertlogic.com'
+    description: integration
+    x-alertlogic-session-endpoint: true
+paths:
+  /ingest/v1/types:
+    get:
+      summary: Get types
+      tags: []
+      responses:
+        '200':
+          description: OK
+      operationId: get_types
+      description: |+
+        Return a list of all supported data stream types.
+
+
+      security:
+        - X-AIMS-Auth-Token: []
+  '/ingest/v1/type/{type}':
+    get:
+      summary: Get Type Attributes
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: {}
+      operationId: get_type_attributes
+      description: "Return the attributes of a data type. \nAll type attributes are static with the exception of packet and packet_versions. As such, defining <<\"latest\">> as the version to fetch for packet will return the most recent version. Leaving version undefined while fetching packet will also return the same as <<\"latest\">>"
+      security:
+        - X-AIMS-Auth-Token: []
+      parameters:
+        - schema:
+            type: array
+            enum:
+              - name
+              - encodings
+              - packet
+              - packet_versions
+              - export
+            default: 'name, encodings, packet, packet_versions, export'
+          in: query
+          name: attributes
+          description: 'A list of type attributes to return. This option is used to return a specified set of type attributes instead of all possible type attributes. Possible attributes to query include : name packet_versions encodings fields packet export'
+        - schema:
+            type: string
+            default: 1.0.0
+          in: query
+          name: version
+          description: "This is the version of the packet schema which the user would like to return. \nValues can be any of the form int.int.int"
+    parameters:
+      - schema:
+          type: string
+        name: type
+        in: path
+        required: true
+        description: A data type managed by the service. The currently known types are available by calling `get_types` API
+  '/ingest/v1/{account_id}/data/{type}':
+    post:
+      summary: Send Data
+      operationId: send_data
+      responses:
+        '200':
+          description: received
+        '307':
+          description: Temporary Redirect
+        '400':
+          description: Bad Request
+      description: Send data to the Ingest Service
+      security:
+        - X-AIMS-Auth-Token: []
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: sid
+          description: |-
+            The appliance identifier
+
+            This query parameter is required if the source of the data type is an appliance, and not a agent running on an customer system. This appliance to data types, such as, snmsgs which are IDS events generated on the appliance itself.
+        - schema:
+            type: string
+          in: query
+          name: chkpt
+          description: The caller may use this for tracability of the records they send.
+        - schema:
+            type: boolean
+            enum:
+              - 'true'
+              - 'false'
+            default: 'false'
+          in: query
+          name: return_ingest_ids
+          description: |-
+            The caller may use this to receive the ingest_ids which is the unique identifier generated when the message is ingested. This can later be used to find the ingested message in daccess.
+
+            This can then be decoded by first base64 decoding the message, decompress using the zlib library, and getting the unique ids through the use of the uuid library on every 16 bytes of the returned ingest_ids.
+
+            The message can later be retrieved from daccess via the `Read Messages` API
+        - schema:
+            type: string
+          in: header
+          name: content-type
+          description: "The content-type header should be set to the encoding format of the data being sent. \nEach data type, supports a specific set of data encodings that can be specified, and they can be retrieved via the `Get Type Attributes` API\n\n"
+          required: true
+        - schema:
+            type: string
+            enum:
+              - deflate
+              - chunk
+          in: header
+          name: content-encoding
+          description: 'Use the `content_encoding` to leverage both chunk encoding to stream larger bodies, as well as the standard compression types when sending data type encodings that do not natuarally compress the data. This will result in a much more efficent interaction for both the client as well as the service.'
+        - schema:
+            type: string
+          in: query
+          name: environ
+          description: |
+            The deployment environment to target with the API request. This parameter only applies when the service is running in the integration accounts, and is not supported in production.
+      requestBody:
+        content:
+          alertlogic.com/json:
+            schema:
+              type: array
+              description: ' Data to send to the Ingest service'
+              items:
+                oneOf:
+                  - $ref: '#/components/schemas/AuditMsg'
+                  - $ref: '#/components/schemas/FimData'
+        description: Data payload
+        required: true
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+        name: type
+        in: path
+        required: true
+        description: |-
+          Ingestion Data Type
+          Below is the mapping between `type` and `data` models:
+            'auditmsgs' -> AuditMsgs-0.0.2
+components:
+  schemas:
+    FimData:
+      title: FimData
+      type: object
+      description: FIM Event Data Type
+      properties:
+        ts:
+          type: integer
+        host_id:
+          type: string
+        event_type:
+          type: string
+        path:
+          type: string
+        file_type:
+          type: string
+        file_name:
+          type: string
+        file_size:
+          type: integer
+        file_owner:
+          type: string
+        file_group:
+          type: string
+        file_permissions:
+          type: integer
+        file_attributes:
+          type: integer
+        file_ctime:
+          type: integer
+        file_atime:
+          type: integer
+        file_mtime:
+          type: integer
+        sha1_hash:
+          type: string
+      required:
+        - ts
+        - path
+      x-examples:
+        FIM Event Example:
+          ts: 1583953656
+          host_id: 4a053698-59e2-4a82-b781-edb5e66715ca
+          event_type: example_event_type
+          path: example/path
+          file_type: example_file_type
+          file_name: example_file_name
+          file_size: 123
+          file_owner: example_file_owner
+          file_group: example_file_group
+          file_permissions: 777
+          file_attributes: 444
+          file_ctime: 1583953653
+          file_atime: 1583953654
+          file_mtime: 1583953655
+          sha1_hash: 6bf26de67c119d28fa37985dff7fd6aa44a00b99
+    AuditMsg:
+      title: AuditMsg
+      description: Audit Messages Data Type
+      type: object
+      x-examples:
+        aetuner service audit message:
+          actor_alrn: 'alrn:aims::1000001:account:1000001'
+          reporter_alrn: 'alrn:aims::1000001:account:1000001'
+          event_name: Update Analytic
+          event_type: update_analytic
+          event_ts: 1584103549
+          object_alrn: 'alrn:aetuner::12345:'
+          object_name: firewall/sda
+          facility_type: api_endpoint
+          facility:
+            method: update_analytic
+            endpoint: aetuner/v1/
+          data:
+            severity: high
+            visibility: observation
+          reason: testing
+          data_encoding: alertlogic.com/json
+          data_version: v1
+      properties:
+        actor_alrn:
+          type: string
+        reporter_alrn:
+          type: string
+          description: "Reporter's Alert Logic Resource Name"
+        event_name:
+          type: string
+          description: ' The event being reported (human friendly)'
+        event_type:
+          type: string
+          description: The event being reported (programatically friendly)
+        event_ts:
+          type: integer
+          description: Epoch timestamp of the event
+        object_alrn:
+          type: string
+        object_name:
+          type: string
+          description: "Affected object's name"
+        facility_type:
+          type: string
+          enum:
+            - api_endpoint
+          description: Facility for the change
+        facility:
+          type: object
+          description: Facility details
+          required:
+            - method
+            - endpoint
+          properties:
+            method:
+              type: string
+            endpoint:
+              type: string
+        data:
+          type: object
+          description: |-
+            Details of the event.
+            A JSON object, limited to 4KB in size, that describes the event
+        data_encoding:
+          type: string
+          default: alertlogic.com/json
+          enum:
+            - alertlogic.com/json
+        data_version:
+          type: string
+          default: v1
+          enum:
+            - v1
+      required:
+        - actor_alrn
+        - reporter_alrn
+        - event_name
+        - event_type
+        - event_ts
+        - object_alrn
+        - object_name
+        - facility_type
+        - facility
+        - data
+    LogMsg:
+      title: LogMsg
+      description: Log Messages Data Type
+      type: object
+      properties:
+        time_recv:
+          type: integer
+          format: int64
+        pid:
+          type: integer
+          format: int64
+        host_name:
+          type: string
+        facility:
+          type: string
+        program:
+          type: string
+        message:
+          type: string
+        header:
+          type: string
+      required:
+        - time_recv
+        - message
+  securitySchemes:
+    X-AIMS-Auth-Token:
+      name: X-AIMS-Auth-Token
+      type: apiKey
+      in: header
+
