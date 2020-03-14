@@ -92,45 +92,56 @@ class Session():
         else:
             self._access_key_id, self._secret_key = self._config.get_auth()
 
-    def _set_credentials(self, access_key_id, secret_key, aims_token):
-        self._access_key_id = access_key_id
-        self._secret_key = secret_key
-        self._token = aims_token
-
     def _authenticate(self):
         """
         Authenticates against Access and Identity Management Service (AIMS)
         more info:
         https://console.cloudinsight.alertlogic.com/api/aims/#api-AIMS_Authentication_and_Authorization_Resources-Authenticate
         """
-        logger.info(f"Authenticating '{self._access_key_id}' " +
-                    f"user against '{self._global_endpoint_url}' endpoint.")
-        try:
-            self._session.auth = (self._access_key_id, self._secret_key)
-            response = self._session.post(
-                    f"{self._global_endpoint_url}/aims/v1/authenticate")
-            response.raise_for_status()
-        except requests.exceptions.HTTPError as e:
-            raise AuthenticationException("invalid http response {}".format(e))
 
-        auth_info = response.json()
-        try:
-            self._token = auth_info["authentication"]["token"]
-        except (KeyError, TypeError, ValueError):
-            raise AuthenticationException("token not found in response")
+        if not self._token:
+            logger.info(
+                    f"Authenticating '{self._access_key_id}' " +
+                    f"user against '{self._global_endpoint_url}' endpoint."
+                )
+            try:
+                self._session.auth = (self._access_key_id, self._secret_key)
+                response = self._session.post(
+                        f"{self._global_endpoint_url}/aims/v1/authenticate")
+                response.raise_for_status()
+
+                auth_info = response.json()
+                account_info = auth_info["authentication"]["account"]
+                self._token = auth_info["authentication"]["token"]
+
+            except requests.exceptions.HTTPError as e:
+                raise AuthenticationException(f"invalid http response {e}")
+            except (KeyError, TypeError, ValueError):
+                raise AuthenticationException("token not found in response")
+        else:
+            logger.info("Authenticating using aims token " +
+                        f"against '{self._global_endpoint_url}' endpoint.")
+            try:
+                response = self._session.get(
+                        f"{self._global_endpoint_url}/aims/v1/token_info",
+                        headers={'x-aims-auth-token': self._token})
+                response.raise_for_status()
+                account_info = response.json()["account"]
+
+            except requests.exceptions.HTTPError as e:
+                self._token = None
+                return self._authenticate()
+            except (KeyError, TypeError, ValueError):
+                raise AuthenticationException(
+                        "account information not found in response")
 
         if self._account_id is None:
             try:
-                self._account_id = auth_info["authentication"]["account"]["id"]
+                self._account_id = account_info["id"]
+                self._account_name = account_info["name"]
             except (KeyError, TypeError, ValueError):
                 raise AuthenticationException(
-                        "account id not found in response")
-
-        try:
-            self._account_name = auth_info["authentication"]["account"]["name"]
-        except (KeyError, TypeError, ValueError):
-            raise AuthenticationException(
-                    "account name not found in response")
+                        "account information not found in response")
 
     def __call__(self, r):
         """
