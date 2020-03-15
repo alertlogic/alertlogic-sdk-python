@@ -128,7 +128,7 @@ class Session():
                 response.raise_for_status()
                 account_info = response.json()["account"]
 
-            except requests.exceptions.HTTPError as e:
+            except requests.exceptions.HTTPError:
                 self._token = None
                 return self._authenticate()
             except (KeyError, TypeError, ValueError):
