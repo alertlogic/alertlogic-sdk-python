@@ -192,12 +192,16 @@ class RequestBodyObjectParameter(RequestBodyParameter):
                  al_schema={},
                  required=False,
                  session=None):
-        super().__init__(name, schema, required, session)
+        super().__init__(
+                name,
+                _normalize_schema(name,
+                                  schema,
+                                  required),
+                required,
+                session
+            )
 
-        self._schema = self._normilize_body_schema(schema)
-        self._al_schema = al_schema
-
-        self._encoding = al_schema.pop(OpenAPIKeyWord.ENCODING)
+        self._encoding = al_schema.pop(OpenAPIKeyWord.ENCODING, None)
         self._explode = \
             self._encoding and \
             self._encoding.get(OpenAPIKeyWord.EXPLODE, False)
@@ -205,7 +209,7 @@ class RequestBodyObjectParameter(RequestBodyParameter):
         #
         # Get request body object properties
         #
-        self._properties = self._schema.get(OpenAPIKeyWord.PROPERTIES)
+        self._properties = self._schema.get(OpenAPIKeyWord.PROPERTIES, None)
         self._required_properties = self._schema.get(
                                             OpenAPIKeyWord.REQUIRED, [])
 
@@ -216,22 +220,16 @@ class RequestBodyObjectParameter(RequestBodyParameter):
                 f"{self._properties and self._properties.keys() or self.name}"
             )
 
-    def _normilize_body_schema(self, schema):
-        return schema
-
     def serialize(self, kwargs, headers=None):
         if not all(name in kwargs for name in self._required_properties):
             raise AlmdrlibValueError(
                 f"'{self._required_properties}' parameters are required. " +
                 f"'{kwargs}' were provided.")
 
-        if self._properties:
-            result = {
-                        k: kwargs.pop(k)
-                        for k in self._properties.keys() if k in kwargs
-                    }
-        else:
-            result = kwargs.pop(self.name)
+        result = {
+                    k: kwargs.pop(k)
+                    for k in self._properties.keys() if k in kwargs
+                }
 
         if self.required and not bool(result):
             raise AlmdrlibValueError(
@@ -239,15 +237,17 @@ class RequestBodyObjectParameter(RequestBodyParameter):
                 f"{self._properties.keys()} parameters must be specified."
             )
 
+        # Validate provided payload against the schema
         self.validate(result)
+
         if self._explode:
-            kwargs['data'] = json.dumps(result)
+            kwargs['data'] = json.dumps(result.pop(self.name))
         else:
             kwargs['data'] = json.dumps({self.name: result})
 
     @property
     def schema(self):
-        return self._schema.get(OpenAPIKeyWord.PROPERTIES, {})
+        return self._properties
 
 
 class RequestBody(object):
@@ -770,6 +770,23 @@ def _normalize_spec(spec_file_path, spec):
         for method in path.values():
             method.setdefault(OpenAPIKeyWord.PARAMETERS, [])
             method[OpenAPIKeyWord.PARAMETERS].extend(parameters)
+
+
+def _normalize_schema(name, schema, required=False):
+    properties = schema.get(OpenAPIKeyWord.PROPERTIES)
+    if properties and bool(properties):
+        return schema
+
+    result = {
+        OpenAPIKeyWord.TYPE: OpenAPIKeyWord.OBJECT,
+        OpenAPIKeyWord.PROPERTIES: {
+            name: schema
+        }
+    }
+
+    if required:
+        result[OpenAPIKeyWord.REQUIRED] = [name]
+    return result
 
 
 def deep_merge(target, source):
