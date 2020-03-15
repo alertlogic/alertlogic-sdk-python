@@ -42,37 +42,21 @@
 				}
 			}
 		},
-		"post_payload_in_body": {
+	    "post_payload_in_body": {
 			"operationId": "post_payload_in_body",
 			"description": "Post json object with keys being serialized",
-			"content": {
-				"application/json": {
-					"properties": {
-						"data": {
-							"type": "object",
-							"description": "Serializable Object",
-							"required": true
-						}
-					}
-				},
-				"application/protobuf": {
-					"properties": {
-						"data": {
-							"type": "string",
-							"format": "binary",
-							"required": true
-						}
-					}
-				}
-			},
 			"parameters": {
 				"account_id": {
 					"type": "string",
 					"in": "path",
 					"required": true,
 					"description": "AIMS Account ID"
+				},
+				"payload": {
+					"type": "object",
+					"additionalProperties": true
 				}
-			}
+			}	
 		}
 	}
 }

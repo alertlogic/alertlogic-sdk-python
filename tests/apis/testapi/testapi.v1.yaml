@@ -20,7 +20,6 @@ paths:
     get:
       summary: Test Get Data Operation
       tags: []
-      responses: {}
       operationId: test_get_data
       description: Test get data with header and query parameters
       security:
@@ -53,6 +52,9 @@ paths:
           in: query
           name: query_param1
           description: 'query parameter 1 description: optional; array'
+      responses:
+        '200':
+          description: OK
     parameters:
       - schema:
           type: string
@@ -67,34 +69,16 @@ paths:
         '200':
           description: OK
       description: Post json object with keys being serialized
-      security:
-        - X-AIMS-Auth-Token: []
       requestBody:
         content:
           application/json:
             schema:
               type: object
-              properties:
-                data:
-                  type: object
-                  description: Serializable Object
-              required:
-                - data
+              additionalProperties: true
             x-alertlogic-schema:
-              in: body
-              required: true
-          application/protobuf:
-            schema:
-              type: object
-              properties:
-                data:
-                  type: string
-                  format: binary
-              required:
-                - data
-        description: |-
-          The result of this operation is to pass `payload` keys as data for http post, not the payload.
-          For example: {tagset: {key1: value1, key2: value2}} will be passed as {key1: value1, key2, value2}
+              name: payload
+              encoding:
+                explode: true
 components:
   schemas:
     SimpleDataTypesModel:

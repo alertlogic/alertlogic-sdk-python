@@ -36,7 +36,7 @@ class TestSdk_open_api_support(unittest.TestCase):
         services = Session.list_services()
         self.assertTrue(self._service_name in services)
         self.assertTrue(len(Session.get_service_api("testapi")))
-        # print(f"{Session.get_service_api('testapi')}")
+        print(f"SCHEMA: {json.dumps(Session.get_service_api('testapi'))}")
 
     def test_001_test_client_initialization(self):
         """Test OpenAPI Client initialization."""
@@ -72,9 +72,9 @@ class TestSdk_open_api_support(unittest.TestCase):
             for name, value in t_operation_parameters.items():
                 self.assertEqual(value, operation_parameters[name])
 
-            # if OpenAPIKeyWord.CONTENT in t_operation_schema:
-            #     t_operation_content = t_operation_schema[
-            #                                 OpenAPIKeyWord.CONTENT]
-            #     operation_content = schema[OpenAPIKeyWord.CONTENT]
-            #     for name, value in t_operation_content.items():
-            #         self.assertEqual(value, operation_content[name])
+            if OpenAPIKeyWord.CONTENT in t_operation_schema:
+                t_operation_content = t_operation_schema[
+                                            OpenAPIKeyWord.CONTENT]
+                operation_content = schema[OpenAPIKeyWord.CONTENT]
+                for name, value in t_operation_content.items():
+                    self.assertEqual(value, operation_content[name])
