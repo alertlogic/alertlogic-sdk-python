@@ -172,7 +172,6 @@ class RequestBodySchemaParameter(RequestBodyParameter):
         super().__init__(name, schema, required, session)
 
     def serialize(self, kwargs, header=[]):
-        # TODO: Add validation
         data = kwargs.pop(self.name, {})
         self.validate(data)
         kwargs['data'] = json.dumps(data)
@@ -183,26 +182,39 @@ class RequestBodySimpleParameter(RequestBodyParameter):
         super().__init__(name, schema, required, session)
 
     def serialize(self, kwargs, header=None):
-        kwargs['data'] = kwargs.pop(self._name, "")
+        kwargs['data'] = kwargs.pop(self.name, "")
 
 
 class RequestBodyObjectParameter(RequestBodyParameter):
     def __init__(self,
                  name,
                  schema,
-                 encoding=None,
+                 al_schema={},
                  required=False,
                  session=None):
         super().__init__(name, schema, required, session)
 
         self._schema = self._normilize_body_schema(schema)
-        self._encoding = encoding
-        self._explode = encoding and encoding.get(
-                                        OpenAPIKeyWord.EXPLODE, False)
+        self._al_schema = al_schema
 
+        self._encoding = al_schema.pop(OpenAPIKeyWord.ENCODING)
+        self._explode = \
+            self._encoding and \
+            self._encoding.get(OpenAPIKeyWord.EXPLODE, False)
+
+        #
+        # Get request body object properties
+        #
+        self._properties = self._schema.get(OpenAPIKeyWord.PROPERTIES)
         self._required_properties = self._schema.get(
-                                        OpenAPIKeyWord.REQUIRED, [])
-        self._properties = self._schema.get(OpenAPIKeyWord.PROPERTIES, [])
+                                            OpenAPIKeyWord.REQUIRED, [])
+
+        logger.debug(
+                "Initialized body parameter. " +
+                f"Name: {self.name}. " +
+                "Properties: " +
+                f"{self._properties and self._properties.keys() or self.name}"
+            )
 
     def _normilize_body_schema(self, schema):
         return schema
@@ -213,20 +225,25 @@ class RequestBodyObjectParameter(RequestBodyParameter):
                 f"'{self._required_properties}' parameters are required. " +
                 f"'{kwargs}' were provided.")
 
-        result = {
-                    k: kwargs.pop(k)
-                    for k in self._properties.keys() if k in kwargs
-                }
+        if self._properties:
+            result = {
+                        k: kwargs.pop(k)
+                        for k in self._properties.keys() if k in kwargs
+                    }
+        else:
+            result = kwargs.pop(self.name)
 
         if self.required and not bool(result):
             raise AlmdrlibValueError(
                 "At least one the " +
                 f"{self._properties.keys()} parameters must be specified."
             )
+
+        self.validate(result)
         if self._explode:
             kwargs['data'] = json.dumps(result)
         else:
-            kwargs['data'] = json.dumps({self._name: result})
+            kwargs['data'] = json.dumps({self.name: result})
 
     @property
     def schema(self):
@@ -242,7 +259,7 @@ class RequestBody(object):
         self._content = {}
         self._default_content_type = None
 
-    def add_content(self, content_type, schema, al_schema, encoding):
+    def add_content(self, content_type, schema, al_schema):
         if not schema:
             return
 
@@ -252,7 +269,7 @@ class RequestBody(object):
             parameter = RequestBodyObjectParameter(
                             name=name,
                             schema=schema,
-                            encoding=encoding.get('data'),
+                            al_schema=al_schema,
                             required=self._required,
                             session=self._session
                         )
@@ -390,7 +407,6 @@ class Operation(object):
 
     def __init__(self,
                  path,
-                 # ref,
                  params,
                  summary,
                  description,
@@ -399,7 +415,6 @@ class Operation(object):
                  session=None,
                  server=None):
         self._path = path
-        # self._ref = ref
         self._params = params
         self._summary = summary
         self._description = description
@@ -408,6 +423,9 @@ class Operation(object):
         self._body = body
         self._session = session
         self._server = server
+        self._operation_id = self._spec[OpenAPIKeyWord.OPERATION_ID]
+
+        logger.debug(f"Initilized {self._operation_id} operation.")
 
     @property
     def spec(self):
@@ -415,7 +433,7 @@ class Operation(object):
 
     @property
     def operation_id(self):
-        return self._spec[OpenAPIKeyWord.OPERATION_ID]
+        return self._operation_id
 
     @property
     def method(self):
@@ -468,6 +486,9 @@ class Operation(object):
             headers = {}
             cookies = {}
 
+            logger.debug(
+                    f"{self.operation_id} called " +
+                    f"with {kwargs} arguments")
             # Set operation specific parameters
             for param in self._params:
                 param.serialize(path_params, params, headers, cookies, kwargs)
@@ -676,8 +697,7 @@ class Client(object):
             request_body.add_content(
                     content_type,
                     content_schema.pop(OpenAPIKeyWord.SCHEMA),
-                    content_schema.pop(OpenAPIKeyWord.X_ALERTLOGIC_SCHEMA, {}),
-                    content_schema.pop(OpenAPIKeyWord.ENCODING, {})
+                    content_schema.pop(OpenAPIKeyWord.X_ALERTLOGIC_SCHEMA, {})
             )
         return request_body
 

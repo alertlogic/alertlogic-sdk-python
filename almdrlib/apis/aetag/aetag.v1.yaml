@@ -104,14 +104,11 @@ paths:
           application/json:
             schema:
               type: object
-              properties:
-                tagset:
-                  type: object
-                  additionalProperties: true
-              required:
-                - tagset
-            encoding:
-              tagset:
+              additionalProperties: true
+              description: JSON Object with key/values to set the tag set to.
+            x-alertlogic-schema:
+              name: tagset
+              encoding:
                 explode: true
         description: Tagset Object
       parameters:
@@ -206,15 +203,14 @@ paths:
           application/json:
             schema:
               type: object
-              properties:
-                tagset:
-                  type: object
-                  additionalProperties: true
-              required:
-                - tagset
-            encoding:
-              tagset:
+              additionalProperties: true
+              description: JSON Object with key/values to set the tag set to.
+            x-alertlogic-schema:
+              name: tagset
+              encoding:
                 explode: true
+        description: map/object which validates against a given tagset definition
+        required: true
     parameters: []
   '/aetag/v1/{account_id}/tunings':
     post:
@@ -246,15 +242,14 @@ paths:
           application/json:
             schema:
               type: object
-              properties:
-                tagset:
-                  type: object
-                  additionalProperties: true
-              required:
-                - tagset
-            encoding:
-              tagset:
+              additionalProperties: true
+              description: JSON Object with key/values to set the tag set to.
+            x-alertlogic-schema:
+              name: tagset
+              encoding:
                 explode: true
+        description: map/object which validates against a given tagset definition
+        required: true
     parameters:
       - schema:
           type: string
@@ -289,17 +284,14 @@ paths:
           application/json:
             schema:
               type: object
-              properties:
-                tagset:
-                  type: object
-                  additionalProperties: true
-                  description: JSON Object with key/values to set the tag set to.
-              required:
-                - tagset
-            encoding:
-              tagset:
+              additionalProperties: true
+              description: JSON Object with key/values to set the tag set to.
+            x-alertlogic-schema:
+              name: tagset
+              encoding:
                 explode: true
         description: map/object which validates against a given tagset definition
+        required: true
       parameters:
         - schema:
             type: string
