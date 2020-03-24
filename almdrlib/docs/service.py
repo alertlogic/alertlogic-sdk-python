@@ -1,8 +1,7 @@
 import json
-import textwrap
 import logging
-from pypandoc import convert_text
-from almdrlib.docs.format import ServiceFormat
+import itertools
+from m2r import convert
 from almdrlib.client import OpenAPIKeyWord
 
 logger = logging.getLogger(__name__)
@@ -12,226 +11,249 @@ class ServiceDocGenerator(object):
     def __init__(self,
                  service_name,
                  spec,
-                 width=256,
+                 initial_indent='  ',
                  indent_increment=2):
-        self._width = width
+        self._initial_indent = initial_indent
         self._indent_increment = indent_increment
-        self._initial_indent = '    '
-        self._subsequent_indent = '    '
         self._service_name = service_name
         self._spec = spec
-        self._doc = []
 
-    def make_documentation(self):
-        logger.info(
-            f"Generating documentation for '{self._service_name}' service.")
+    def _indent(self, indent, count=1):
+        return indent + self._initial_indent * count
 
-        self._make_header()
-        self._make_methods()
-        return '\n'.join(self._doc).encode('utf-8')
+    def get_documentation(self):
+        generators = []
+        generators.append(self._make_header())
+        generators.append(self._make_class())
+        generators.append(self._make_methods())
+        return iter(itertools.chain(*generators))
 
     def _make_header(self):
-        logger.debug(
-            f"Making header for '{self._service_name}' service.")
-        section_line = '*'*len(self._service_name)
+        yield self._service_name.capitalize()
+        yield '*' * len(self._service_name)
+        yield ''
 
-        # Add Header Section
-        header_section = ServiceFormat.CLIENT_SECTION.format(
-                section_line,
-                self._service_name.capitalize()
-            )
-        self._doc.append(header_section)
+        yield '.. contents:: Table of Contents'
+        yield '   :depth: 2'
+        yield ''
 
-        operations = self._spec['operations']
-        methods = [
-            ServiceFormat.METHOD_HEADER.format(
-                self._service_name.capitalize(),
-                op_name
-            )
-            for op_name in operations.keys()
-        ]
+    def _make_class(self):
+        yield '======'
+        yield 'Client'
+        yield '======'
 
-        # Add Client Section
-        class_section = ServiceFormat.CLASS_SECTION.format(
-                self._service_name.capitalize(),
-                self._service_name,
-                '\n'.join(methods)
-            )
-        self._doc.append(class_section)
+        indent = self._initial_indent
+        c_name = self._service_name.capitalize()
+        yield f'.. py:class:: {c_name}.Client'
+        yield ''
+        yield f"{indent}A client object representing '{c_name}' Service::"
+        yield ''
+
+        yield f'{indent*2}import almdrlib'
+        yield ''
+        yield f"{indent*2}client = almdrlib.client('{self._service_name}')"
+        yield ''
+
+        yield f'{indent}Available methods:'
+        for op_name in self._spec['operations'].keys():
+            yield ''
+            yield f'{indent}*   :py:meth:`~{c_name}.Client.{op_name}`'
+            yield ''
 
     def _make_methods(self):
-        operations = self._spec['operations']
-        for op_name, op_spec in operations.items():
-            self._make_method(op_name, op_spec)
+        indent = self._initial_indent
+        for op_name, op_spec in self._spec['operations'].items():
+            yield ''
+            yield f'{indent}.. py:method:: {op_name}(**kwargs)'
+            for line in convert(op_spec.get('description', "")).splitlines():
+                yield f'{indent}{indent}{line}'
 
-    def _make_method(self, op_name, op_spec):
-        '''
-        Make a secition for a method
-        '''
-        logger.debug(
-            f"Making documentation for '{op_name}' method")
+            parameters = op_spec.get('parameters', {})
+            for line in self._make_request_syntax(
+                    op_name, parameters, self._indent(indent)):
+                yield line
 
-        # Declare method
-        indent = ServiceFormat.INDENT_INCREMENT
-        self._doc.append(
-                ServiceFormat.METHOD_DECLARATION.format(
-                    op_name,
-                    indent
-                )
-            )
+            yield from self._make_request_parameters(parameters, indent)
 
-        # Add method description
-        indent += ServiceFormat.INDENT_INCREMENT
-        description = self._format_text(
-                op_spec.get(OpenAPIKeyWord.DESCRIPTION, ''),
-                indent=indent + ServiceFormat.INDENT_INCREMENT,
-                format='md'
-            )
-        self._doc.append(f"\n\n{description}\n\n")
-
-        # Add method request syntax
-        parameters = op_spec.get(OpenAPIKeyWord.PARAMETERS, {})
-
-        self._make_request_syntax(
-                name=op_name,
-                parameters=parameters,
-                indent=indent+ServiceFormat.INDENT_INCREMENT)
-
-        # Process method parameters
-        for param_name, param_spec in parameters.items():
-            self._make_parameter(
-                    param_name,
-                    param_spec,
-                    format_string=ServiceFormat.PARAM_DECLARATION,
-                    indent=indent
-                )
+            yield from self._make_response(op_spec.get('response', {}), indent)
 
     def _make_request_syntax(self, name, parameters, indent):
-        self._doc.append(ServiceFormat.REQUEST_SYNTAX_HEADER.format(indent))
-        indent += ServiceFormat.INDENT_INCREMENT
-        request_params = self._make_request_spec(parameters, indent)
+        yield ''
+        yield f'{indent}**Request Syntax**'
+        yield f'{indent}::'
+        yield ''
 
-        self._doc.append(
-            ServiceFormat.REQUEST_SYNTAX_DECLARATION.format(
-                name,
-                request_params,
-                indent
-            )
-        )
+        indent = self._indent(indent)
+        yield f'{indent}response = client.{name}('
 
-    def _make_request_spec(self, parameters, indent):
-        indent += ServiceFormat.INDENT_INCREMENT*2
+        param_indent = self._indent(indent, 2)
         request_spec = [
-            f"{indent}{ServiceFormat.INDENT_INCREMENT}{param_name}=" +
-            f"{self._get_param_spec(param_spec, indent)}"
-            for param_name, param_spec in parameters.items()
-        ]
-        return '\n'.join(request_spec).replace('"', "'").replace("''", "'")
+                f"{param_indent}{param_name}=" +
+                format_json(get_param_spec(param_spec), param_indent)
+                for param_name, param_spec in parameters.items()
+            ]
 
-    def _get_param_spec(self, spec, indent):
-        param_type = spec.get(OpenAPIKeyWord.TYPE, OpenAPIKeyWord.STRING)
-        if param_type == OpenAPIKeyWord.OBJECT:
-            return self._get_dict_param_spec(
-                    spec.get(OpenAPIKeyWord.PROPERTIES, {}),
-                    indent)
-        elif param_type == OpenAPIKeyWord.BOOLEAN:
-            return "True|False"
-        else:
-            enum = spec.get(OpenAPIKeyWord.ENUM)
-            if enum:
-                return '|'.join(f"'{v}'" for v in enum)
+        result = '\n'.join(request_spec).replace('"', "'").replace("''", "'")
+        for line in result.splitlines():
+            yield f'{line}'
+        yield f'{indent})'
+
+    def _make_request_parameters(self, parameters, indent):
+        for name, spec in parameters.items():
+            yield ''
+            type = get_param_type(spec)
+            yield f'{indent}:type {name}: {type}'
+            if spec.get('required'):
+                yield f'{indent}:param {name}: **[REQUIRED]**'
             else:
-                return f"'{param_type}'"
+                yield f'{indent}:param {name}:'
+            yield ''
 
-    def _get_dict_param_spec(self, properties, indent):
-        indent += ServiceFormat.INDENT_INCREMENT
-        res = {
-                name: self._get_param_spec(value, indent)
-                for name, value in properties.items()
-        }
+            for line in convert(spec.get('description', "")).splitlines():
+                yield f'{indent}{indent}{line}'
 
-        return self._format_text(
-                json.dumps(res, sort_keys=True, indent=4),
-                separator='\n' + indent
-            )
+    def _make_response(self, spec, indent):
+        yield ''
+        if not bool(spec):
+            yield f'{indent}:returns: None'
+            yield ''
+            return ''
 
-    def _make_parameter(self, param_name, param_spec, format_string, indent):
-        '''
-        Make parameter section
-        '''
-        param_required = param_spec.get(OpenAPIKeyWord.REQUIRED, False)
-        param_type = self._get_param_type(
-                param_spec.get(OpenAPIKeyWord.TYPE, OpenAPIKeyWord.STRING),
-                param_spec.get(OpenAPIKeyWord.FORMAT)
-            )
+        yield f'{indent}:rtype: {get_param_type(spec)}'
+        yield f'{indent}:returns:'
 
-        self._doc.append(
-                format_string.format(
-                    param_name,
-                    param_type,
-                    param_required and ServiceFormat.REQUIRED_QUALIFIER or "",
-                    indent
-                )
-            )
+        indent = self._indent(indent)
+        yield f'{indent}**Response Syntax**'
+        yield ''
+        yield f'{indent}::'
 
-        indent += ServiceFormat.INDENT_INCREMENT
-        description = self._format_text(
-                param_spec.get(OpenAPIKeyWord.DESCRIPTION, ""),
-                indent=indent,
-                format='md'
-            )
-        self._doc.append(f"{description}\n\n")
+        yield ''
+        syntax_indent = self._indent(indent)
+        syntax = format_json(get_param_spec(spec))
+        for line in syntax.replace('"', "'").replace("''", "'").splitlines():
+            yield f'{syntax_indent}{line}'
 
-        if param_type == 'dict':
-            self._make_dict_parameter(
-                    parameters=param_spec.get(OpenAPIKeyWord.PROPERTIES, {}),
-                    indent=indent
-                )
-        elif param_spec.get(OpenAPIKeyWord.ENUM):
-            self._make_enum(param_spec[OpenAPIKeyWord.ENUM], indent)
+        yield ''
+        yield f'{indent}**Response Definitions**'
+        yield ''
 
-    def _make_dict_parameter(self, parameters, indent):
-        for param_name, param_spec in parameters.items():
-            self._make_parameter(
-                    param_name,
-                    param_spec,
-                    format_string=ServiceFormat.CHILD_PARAM_DECLARATION,
-                    indent=indent)
+        for line in self._make_response_spec(spec, ''):
+            yield f'{indent}{line}'
 
-    def _make_enum(self, values, indent):
-        values_indent = indent + ServiceFormat.INDENT_INCREMENT
-        self._doc.append(
-                ServiceFormat.ENUM_DECLARATION.format(
-                    ('\n' + values_indent).join(['* ' + v for v in values]),
-                    indent,
-                    values_indent
-                )
-            )
+    def _make_response_spec(self, spec, indent):
+        if 'type' not in spec:
+            if 'oneOf' in spec:
+                _spec = spec['oneOf']
+                yield ''
+                yield f'{indent} * One of the following objects:'
+                yield ''
+            elif 'anyOf' in spec:
+                _spec = spec['anyOf']
+                yield ''
+                yield f'{indent} * Any of the following objects:'
+                yield ''
+            else:
+                logger.warn(f"Unsupported response. {json.dumps(spec)}")
+                return
 
-    def _get_param_type(self, type, format):
-        if type == OpenAPIKeyWord.OBJECT:
-            return 'dict'
-        elif type == OpenAPIKeyWord.ARRAY:
-            return 'array'
+            indent = self._indent(indent)
+            for t_spec in _spec:
+                yield f'{indent}* ``{t_spec.get("title")}`` -'
+                yield ''
+                for line in convert(
+                        t_spec.get('description', "")).splitlines():
+                    yield f'{indent}{indent}{line}'
+                    yield ''
+
+                yield from self._make_response_parameters(
+                        t_spec.get('properties', {}),
+                        self._indent(indent))
+
         else:
-            return format and format or type
+            datatype = spec['type']
+            if datatype == 'object':
+                # Dictionary parameter
+                yield f'{indent}- *(dict) --*'
+                yield ''
+                for line in convert(spec.get('description', "")).splitlines():
+                    yield f'{indent}{indent}{line}'
 
-    def _format_text(
-            self, text,
-            indent='', subsequent_indent=None, separator='\n', format=None):
-        '''
-        Convert text from md to rst.
-        '''
-        conv_text = format and convert_text(text, 'rst', format=format) or text
-        if not subsequent_indent:
-            subsequent_indent = indent
+                yield ''
+                yield from self._make_response_parameters(
+                            spec.get('properties', {}),
+                            self._indent(indent))
 
-        res = [
-            textwrap.fill(
-                    str,
-                    width=self._width,
-                    initial_indent=indent,
-                    subsequent_indent=subsequent_indent)
-            for str in conv_text.splitlines()
-        ]
-        return separator.join(res)
+            if datatype == 'array':
+                yield ''
+                for line in convert(spec.get('description', "")).splitlines():
+                    yield f'{indent}{line}'
+
+                if 'items' in spec:
+                    yield from self._make_response_spec(
+                                spec['items'],
+                                self._indent(indent))
+
+    def _make_response_parameters(self, parameters, indent):
+        for name, spec in parameters.items():
+            yield ''
+            type = get_param_type(spec)
+            if spec.get('required'):
+                yield f'{indent}**{name}** *({type}) --* **[REQUIRED]**'
+            else:
+                yield f'{indent}**{name}** *({type}) --*'
+            yield ''
+
+            for line in convert(spec.get('description', "")).splitlines():
+                yield f'{indent}{indent}{line}'
+            yield ''
+
+            if type == 'dict':
+                yield from self._make_response_parameters(
+                            spec.get('properties', {}),
+                            self._indent(indent))
+
+        yield ''
+
+
+def get_param_spec(spec):
+    if OpenAPIKeyWord.ONE_OF in spec:
+        return get_param_spec(spec[OpenAPIKeyWord.ONE_OF][0])
+
+    if OpenAPIKeyWord.ANY_OF in spec:
+        return get_param_spec(spec[OpenAPIKeyWord.ANY_OF][0])
+
+    param_type = spec.get(OpenAPIKeyWord.TYPE)
+    if param_type == OpenAPIKeyWord.ARRAY:
+        return [get_param_spec(spec.get(OpenAPIKeyWord.ITEMS, {}))]
+
+    if param_type == OpenAPIKeyWord.OBJECT:
+        properties = spec.get(OpenAPIKeyWord.PROPERTIES, {})
+        return {k: get_param_spec(v) for k, v in properties.items()}
+
+    if param_type == OpenAPIKeyWord.BOOLEAN:
+        return "True|False"
+
+    enum = spec.get(OpenAPIKeyWord.ENUM)
+    if enum:
+        return '|'.join(f"'{v}'" for v in enum)
+    else:
+        return f"'{param_type}'"
+
+
+def get_param_type(spec):
+    type = spec.get('type', 'object')
+    format = spec.get('format')
+
+    if type == 'object':
+        return 'dict'
+    elif type == 'array':
+        return 'list'
+    else:
+        return format and format or type
+
+
+def format_json(value, indent=None):
+    if not indent:
+        indent = ''
+    res = json.dumps(value, sort_keys=True, indent=4).splitlines()
+    return f'\n{indent}'.join(res)

@@ -55,7 +55,7 @@ paths:
             print(res.json())
         - lang: alcli
           source: |
-            $alcli aims get_account_details --account_id 111111111
+            $alcli aims get_account_details --account_id 11111
     parameters:
       - schema:
           type: string
@@ -90,7 +90,7 @@ paths:
                     modified:
                       at: 1430189634
                       by: System
-      description: 'To update an account, the client must have permission to update the specified account (aims:<account_id>:update:account). The mfa_required field may be updated by any client with this permission.'
+      description: 'To update an account, the client must have permission to update the specified account (`aims:<account_id>:update:account`). The mfa_required field may be updated by any client with this permission.'
       security:
         - X-AIMS-Auth-Token: []
       requestBody:
@@ -223,7 +223,7 @@ paths:
         name: name
         in: path
         required: true
-        description: 'Account name, URL encoded according to RFC3986. Note that the + character is not interpreted as a space (`) in this scheme; use%20` for spaces instead.'
+        description: 'Account name, URL encoded according to RFC3986. Note that the + character is not interpreted as a space (`) in this scheme; use %20` for spaces instead.'
   '/aims/v1/{account_id}/account_ids/{relationship}':
     get:
       summary: List account IDs by relationship
@@ -406,23 +406,16 @@ paths:
         '503':
           description: Service Unavailable
       description: |-
-        Change a user's password.
-
         The new password must conform to the following standards:
 
         Cannot be identical to current or previous passwords (up to 4 previous passwords checked)
-
         Length of at least 12 characters
-
         Contain three of four possible character types:
-
-        1. Upper case characters
-        2. Lower case characters
-        3. Numbers
-        4. Special characters (!"#$%&'()*+,-./:;<=>?@[]^_`{|}~)
-
+        1) Upper case characters
+        2) Lower case characters
+        3) Numbers
+        4) Special characters (!"#$%&'()*+,-./:;<=>?@[]^_`{|}~)
         Passwords can be specified as UTF-8. Characters in languages that do not have upper or lower case variants qualify as either upper or lower case.
-         
       requestBody:
         content:
           application/json:
@@ -632,25 +625,22 @@ paths:
         Cannot be identical to current or previous passwords (up to 4 previous passwords checked)
         Length of at least 12 characters
         Contain three of four possible character types:
-
         1. Upper case characters
         2. Lower case characters
         3. Numbers
         4. Special characters (!"#$%&'()*+,-./:;<=>?@[]^_`{|}~)
-
         Passwords can be specified as UTF-8. Characters in languages that do not have upper or lower case variants qualify as either upper or lower case.
-
       requestBody:
         content:
           application/json:
             schema:
               type: object
               properties:
-                'password':
+                password:
                   type: string
                   description: New password
               required:
-                - 'password'
+                - password
             examples:
               Password Reset Payload Example:
                 value:
@@ -1052,29 +1042,29 @@ paths:
                       at: 1430185015
                       by: System
       description: |-
-        Enroll a user in multi-factor authentication. Requires either username/password or a valid X-Aims-Session-Token header to enroll. The user must input an RFC 6238 compatible Time-based One-Time Password secret as an otpauth:// format URI (See Google Authenticator's Key URI Format Docs) for complete details. The following parameters must be set in the mfa_uri:
+        Enroll a user in multi-factor authentication. Requires either username/password or a valid `X-Aims-Session-Token` header to enroll. The user must input an [RFC 6238](https://tools.ietf.org/html/rfc6238) compatible Time-based One-Time Password secret as an otpauth:// format URI (See [Google Authenticator's Key URI Format Docs](https://github.com/google/google-authenticator/wiki/Key-Uri-Format) for complete details). The following parameters must be set in the mfa_uri:
 
-        TYPE must be totp
+        * `TYPE` must be `totp`
 
-        LABEL must be the issuer "Alert Logic", colon ":" and user's email, e.g. Alert%20Logic:admin@company.com
+        * `LABEL` must be the issuer "Alert Logic", colon ":" and user's email, e.g. `Alert%20Logic:admin@company.com`
 
-        secret must be an arbitrary value between 16-20 bytes, in non-padded Base32 encoding, e.g., the ASCII string "1s tHiS s3kr3t S4F3?" is GFZSA5CINFJSA4ZTNNZDG5BAKM2EMMZ7 in Base32
+        * `secret` must be an arbitrary value between 16-20 bytes, in non-padded Base32 encoding, e.g., the ASCII string `"1s tHiS s3kr3t S4F3?"` is `GFZSA5CINFJSA4ZTNNZDG5BAKM2EMMZ7` in Base32
 
-        issuer must be "Alert Logic", i.e. issuer=Alert%20Logic
+        * `issuer` must be "Alert Logic", i.e. `issuer=Alert%20Logic`
 
-        algorithm must be SHA1
+        * `algorithm` must be `SHA1`
 
-        digits must be an integer greater than or equal to 6; the default (if missing) is 6
+        * `digits` must be an integer greater than or equal to 6; the default (if missing) is 6
 
-        period must be an integer between 30-60 (seconds); the default (if missing) is 30
+        * `period` must be an integer between 30-60 (seconds); the default (if missing) is 30
 
-        Example mfa_uri: otpauth://totp/Alert%20Logic:admin@company.com?secret=GFZSA5CINFJSA4ZTNNZDG5BAKM2EMMZ7&issuer=Alert%20Logic&algorithm=SHA1
+        Example `mfa_uri: otpauth://totp/Alert%20Logic:admin@company.com?secret=GFZSA5CINFJSA4ZTNNZDG5BAKM2EMMZ7&issuer=Alert%20Logic&algorithm=SHA1`
 
-        The request must also include mfa_codes, an array of 2 or more MFA codes generated by the MFA device. These codes must be valid prior to successful device enrollment.
+        The request must also include `mfa_codes`, an array of 2 or more MFA codes generated by the MFA device. These codes must be valid prior to successful device enrollment.
 
         A user can only enroll an MFA device if they have not already enrolled one. If the user has already enrolled an MFA device, that device must be removed prior to enrolling a different one.
 
-        Once a user enrolls an MFA device, the user is required to provide a valid mfa_code during username/password authentication.
+        Once a user enrolls an MFA device, the user is required to provide a valid `mfa_code` during username/password authentication.
 
       requestBody:
         content:
@@ -1467,6 +1457,7 @@ paths:
             application/json:
               schema:
                 type: object
+                description: Users Response Object
                 properties:
                   users:
                     type: array
@@ -2414,10 +2405,12 @@ components:
       properties:
         id:
           type: string
+          description: Role ID
         account_id:
           type: string
         name:
           type: string
+          description: Role Name
         permissions:
           type: object
           properties:

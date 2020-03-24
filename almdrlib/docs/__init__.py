@@ -15,6 +15,7 @@ def make_documentation(dir, session=None):
 
     :param session: The IWS Services session
     """
+
     doc_path = os.path.join(dir, 'site', 'services')
     if not os.path.exists(doc_path):
         os.makedirs(doc_path)
@@ -23,9 +24,9 @@ def make_documentation(dir, session=None):
         doc = ServiceDocGenerator(
                 service_name=name,
                 spec=Session.get_service_api(name)
-            ).make_documentation()
+            ).get_documentation()
 
         service_doc_path = os.path.join(
             doc_path, name + '.rst')
-        with open(service_doc_path, 'wb') as f:
-            f.write(doc)
+        with open(service_doc_path, 'w+') as f:
+            f.writelines(f"{line}\n" for line in doc)
