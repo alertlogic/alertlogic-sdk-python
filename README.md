@@ -49,8 +49,7 @@ Launch python interpreter and then type:
 >
 1. *Python v3.7* or older
 2. *virtualenv* or *virtualenvwrapper* (We recommend ***virtualenvwrapper***  <https://virtualenvwrapper.readthedocs.io/en/latest/> )
-3. *pandoc* for generating documentation. See <https://pypi.org/project/pypandoc/>
-4. To produce RESTful APIs documentation install *redoc-cli* and *npx*:
+3. To produce RESTful APIs documentation install *redoc-cli* and *npx*:
 >
     ```
     $ npm install --save redoc-cli
