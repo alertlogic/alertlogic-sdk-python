@@ -19,7 +19,8 @@ requirements = [
         'requests>=2.18',
         'configparser>=4.0.2',
         'pyyaml==5.1.2',
-        'jsonschema[format_nongpl]==3.2.0'
+        'jsonschema[format_nongpl]==3.2.0',
+        'm2r==0.2.1'
     ]
 
 test_requirements = [ ]

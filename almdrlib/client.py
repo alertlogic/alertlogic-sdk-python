@@ -36,7 +36,7 @@ class OpenAPIKeyWord:
     VARIABLES = "variables"
     REF = "$ref"
     REQUEST_BODY_NAME = "x-alertlogic-request-body-name"
-
+    RESPONSES = "responses"
     PATHS = "paths"
     OPERATION_ID = "operationId"
     PARAMETERS = "parameters"
@@ -78,6 +78,8 @@ class OpenAPIKeyWord:
     CONTENT_TYPE_TEXT = "text/plain"
     CONTENT_TYPE_PYTHON_PARAM = "content_type"
 
+    RESPONSE = "response"
+    EXCEPTIONS = "exceptions"
     JSON_CONTENT_TYPES = ["application/json", "alertlogic.com/json"]
 
     SIMPLE_DATA_TYPES = [STRING, BOOLEAN, INTEGER, NUMBER]
@@ -93,7 +95,6 @@ logger = logging.getLogger(__name__)
 
 
 class Server(object):
-
     def __init__(self, service_name,
                  url=None, description=None,
                  variables=None,
@@ -127,6 +128,44 @@ class Server(object):
 
     def set_url(self, url):
         self._url = url
+
+
+class OperationResponse(object):
+    _response_schema = {}
+
+    def __init__(self, schema, session=None):
+        logger.debug(f"Initializing response. Spec: {json.dumps(schema)}")
+        for r_code, r_schema in schema.items():
+            if r_code[0] == '2':
+                self._add_response(r_schema.pop(OpenAPIKeyWord.CONTENT, None))
+
+        self._schema = schema
+
+    def _add_response(self, content):
+        if not content:
+            return
+
+        # While there could be more than one content type,
+        # We support only the first content type.
+        content_type, content_type_schema = next(iter(content.items()))
+        if content_type not in OpenAPIKeyWord.JSON_CONTENT_TYPES:
+            logger.warn(
+                    f"{content_type} content type is unsupported." +
+                    f"Only {OpenAPIKeyWord.JSON_CONTENT_TYPES} " +
+                    "content types are supported"
+            )
+        if not content_type_schema:
+            return
+
+        self._response_schema = content_type_schema.get(OpenAPIKeyWord.SCHEMA)
+
+    @property
+    def schema(self):
+        return self._response_schema
+
+    @property
+    def exceptions(self):
+        return {}
 
 
 class RequestBodyParameter(object):
@@ -412,6 +451,7 @@ class Operation(object):
                  description,
                  method, spec,
                  body,
+                 response,
                  session=None,
                  server=None):
         self._path = path
@@ -421,6 +461,7 @@ class Operation(object):
         self._method = method
         self._spec = spec
         self._body = body
+        self._response = response
         self._session = session
         self._server = server
         self._operation_id = self._spec[OpenAPIKeyWord.OPERATION_ID]
@@ -477,6 +518,12 @@ class Operation(object):
         result.update({
             OpenAPIKeyWord.PARAMETERS: dict(sorted(params_schema.items()))
         })
+
+        result.update({
+            OpenAPIKeyWord.RESPONSE: self._response.schema,
+            OpenAPIKeyWord.EXCEPTIONS: self._response.exceptions
+        })
+
         return result
 
     def _gen_call(self):
@@ -658,6 +705,11 @@ class Client(object):
                     )
                     continue
 
+                if operation_id in self._operations:
+                    raise AlmdrlibValueError(f"Duplication {operation_id} \
+                                       specified for {self._name} API")
+
+                # Initialize parameters (path, header, query)
                 params = [
                     PathParameter(spec=s, session=self._session)
                     for s in op_spec.get(OpenAPIKeyWord.PARAMETERS, [])
@@ -665,11 +717,14 @@ class Client(object):
 
                 # Initialize operation's body
                 body = self._initalize_request_body(
-                        op_spec.pop(OpenAPIKeyWord.REQUEST_BODY, None))
+                        op_spec.pop(OpenAPIKeyWord.REQUEST_BODY, None)
+                    )
 
-                if operation_id in self._operations:
-                    raise AlmdrlibValueError(f"Duplication {operation_id} \
-                                       specified for {self._name} API")
+                # Initialize operation's response
+                response = OperationResponse(
+                        op_spec.pop(OpenAPIKeyWord.RESPONSES, None)
+                    )
+
                 self._operations[operation_id] = Operation(
                     path,
                     params,
@@ -678,6 +733,7 @@ class Client(object):
                     method,
                     op_spec,
                     body,
+                    response,
                     session=self._session,
                     server=self._server
                 )
