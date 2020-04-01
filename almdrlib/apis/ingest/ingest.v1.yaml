@@ -27,6 +27,18 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                description: List of data types.
+                items:
+                  type: object
+                  description: Data Type Object
+                  properties:
+                    name:
+                      type: string
+                      description: Data Type Name
       operationId: get_types
       description: |+
         Return a list of all supported data stream types.
@@ -44,8 +56,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties: {}
+                $ref: '#/components/schemas/IngestTypeInfo'
       operationId: get_type_attributes
       description: "Return the attributes of a data type. \nAll type attributes are static with the exception of packet and packet_versions. As such, defining <<\"latest\">> as the version to fetch for packet will return the most recent version. Leaving version undefined while fetching packet will also return the same as <<\"latest\">>"
       security:
@@ -165,7 +176,8 @@ paths:
         description: |-
           Ingestion Data Type
           Below is the mapping between `type` and `data` models:
-            'auditmsgs' -> AuditMsgs-0.0.2
+
+          * 'auditmsgs' -> AuditMsgs-0.0.2
 components:
   schemas:
     FimData:
@@ -249,6 +261,9 @@ components:
       properties:
         actor_alrn:
           type: string
+          description: |-
+            Alert Logic Resource Name in the following format
+            alrn:{service-name}:{location-id}:{account-id}:{resource-type}:{resource-id}
         reporter_alrn:
           type: string
           description: "Reporter's Alert Logic Resource Name"
@@ -332,6 +347,88 @@ components:
       required:
         - time_recv
         - message
+    IngestTypeInfo:
+      title: IngestTypeInfo
+      type: object
+      description: Data Type attributes
+      properties:
+        doc:
+          type: object
+          properties:
+            description:
+              type: string
+            name:
+              type: string
+            fields:
+              type: object
+        encodings:
+          type: array
+          items:
+            type: string
+        export:
+          type: object
+          properties:
+            description:
+              type: string
+            properties:
+              type: string
+            schema:
+              type: string
+            title:
+              type: string
+            type:
+              type: string
+        interval_size:
+          type: integer
+        name:
+          type: string
+        packet:
+          type: object
+          properties:
+            associated:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  key:
+                    type: string
+                  fields:
+                    type: array
+                    items:
+                      type: object
+                  '':
+                    type: string
+            index:
+              type: array
+              items:
+                type: object
+            interval_size:
+              type: integer
+            name:
+              type: string
+            primary:
+              type: object
+              properties:
+                fields:
+                  type: array
+                  items:
+                    type: object
+                key:
+                  type: array
+                  items:
+                    type: string
+                name:
+                  type: string
+            version:
+              type: string
+        packet_versions:
+          type: array
+          items:
+            type: string
+        searchable:
+          type: boolean
   securitySchemes:
     X-AIMS-Auth-Token:
       name: X-AIMS-Auth-Token
