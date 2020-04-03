@@ -238,9 +238,15 @@ class Session():
 
         return None
 
+    def validate_server(self, spec):
+        if 'x-alertlogic-global-endpoint' not in spec:
+            return True
+
+        return self._global_endpoint == spec['x-alertlogic-global-endpoint']
+
     @staticmethod
     def list_services():
-        return next(os.walk(Config.get_api_dir()))[1]
+        return sorted(next(os.walk(Config.get_api_dir()))[1])
 
     @staticmethod
     def get_service_api(service_name, version=None):
