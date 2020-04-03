@@ -4,14 +4,14 @@ info:
   version: '1.0'
   description: Analytics Engine Tuning Service
 servers:
-  - url: 'https://aetuner.mdr.product.dev.alertlogic.com'
-    x-alertlogic-global-endpoint: integration
-    description: integration
   - url: 'https://aetuner.mdr.global.alertlogic.com'
     x-alertlogic-global-endpoint: production
     description: production
+  - url: 'https://aetuner.mdr.product.dev.alertlogic.com'
+    x-alertlogic-global-endpoint: integration
+    description: integration
 paths:
-  '/aetuner/v1/{account_id}/analytics':
+  '/v1/{account_id}/analytics':
     get:
       summary: List Analytics for an account
       tags: []
@@ -72,7 +72,7 @@ paths:
         in: path
         required: true
         description: AIMS Account ID
-  '/aetuner/v1/{account_id}/analytics/{path}':
+  '/v1/{account_id}/analytics/{path}':
     get:
       summary: Get Analytic for a specific customer
       responses:
