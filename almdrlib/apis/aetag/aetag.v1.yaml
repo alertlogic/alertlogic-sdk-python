@@ -4,9 +4,12 @@ info:
   version: '1.0'
   description: Analytics Engine Tagset Service API
 servers:
-  - url: 'https://api.global-integration.us-west-2.product.dev.alertlogic.com'
+  - url: 'https://api.global-services.global.alertlogic.com'
+    description: production
+    x-alertlogic-session-endpoint: true
+  - url: 'https://api.global-integration.product.dev.alertlogic.com'
     description: integration
-    x-alertlogic-session-endpoint: false
+    x-alertlogic-session-endpoint: true
 paths:
   '/aetag/v1/{account_id}/tags/paths/{path}':
     get:
