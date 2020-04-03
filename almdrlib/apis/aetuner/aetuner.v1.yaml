@@ -4,10 +4,10 @@ info:
   version: '1.0'
   description: Analytics Engine Tuning Service
 servers:
-  - url: 'aetuner.mdr.product.dev.alertlogic.com'
+  - url: 'https://aetuner.mdr.product.dev.alertlogic.com'
     x-alertlogic-global-endpoint: integration
     description: integration
-  - url: 'aetuner.mdr.global.alertlogic.com'
+  - url: 'https://aetuner.mdr.global.alertlogic.com'
     x-alertlogic-global-endpoint: production
     description: production
 paths:
