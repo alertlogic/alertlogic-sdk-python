@@ -9,7 +9,7 @@ Alert Logic Software Development Kit for Python allows developers to integrate w
 ## Quick Start
 1. Install the library:
 
-	```$ pip install alertlogic-sdk-python```
+	```pip install alertlogic-sdk-python```
 
 2. Set up configuration file (in e.g. ```~/.alertlogic/config```
 
@@ -19,6 +19,9 @@ Alert Logic Software Development Kit for Python allows developers to integrate w
 	secret_key = YOUR_SECRET
 	```
 
+	To create and manage access keys, use the [Alert Logic Console](https://console.account.alertlogic.com/#/aims/users).  For information on creating an access key, see 
+	[https://docs.alertlogic.com/prepare/access-key-management.htm](https://docs.alertlogic.com/prepare/access-key-management.htm) 
+   
 	Optionally you can specify if you are working with ***integration*** deployment of Alert Logic MDR Services or ***production*** by specifying:
 
 	```
@@ -35,38 +38,43 @@ Alert Logic Software Development Kit for Python allows developers to integrate w
 Launch python interpreter and then type:
 
 	```
-	>>> import almdrlib
-	>>> aims = almdrlib.client("aims")
-	>>> res = aims.get_account_details()
-	>>> print(f"{res.json()}")
+	import almdrlib
+	aims = almdrlib.client("aims")
+	res = aims.get_account_details()
+	print(f"{res.json()}")
 	```
 
 
 ## Development
 
 ### Getting Started
-> Prerequisites:
->
+
+#### Prerequisites:
+
 1. *Python v3.7* or older
 2. *virtualenv* or *virtualenvwrapper* (We recommend ***virtualenvwrapper***  <https://virtualenvwrapper.readthedocs.io/en/latest/> )
 3. To produce RESTful APIs documentation install *redoc-cli* and *npx*:
->
+
     ```
-    $ npm install --save redoc-cli
-    $ npm install --save npx
-	```
+    npm install --save redoc-cli
+    npm install --save npx
+    ```
 
 
 
 Setup your development environment and install required dependencies:
 
 ```
-$ export WORKON_HOME=~/environments
-$ mkdir -p $WORKON_HOME
-$ source /usr/local/bin/virtualenvwrapper.sh
-$ mkvirtualenv alsdk
-(alsdk) $ git clone https://github.com/alertlogic/alertlogic-sdk-python
-(alsdk) $ cd alertlogic-sdk-python
-(alsdk) $ pip install -r requirements_dev.txt
-(alsdk) $ pip install -e .
+export WORKON_HOME=~/environments
+mkdir -p $WORKON_HOME
+source /usr/local/bin/virtualenvwrapper.sh
+mkvirtualenv alsdk
 ```
+
+```
+git clone https://github.com/alertlogic/alertlogic-sdk-python
+cd alertlogic-sdk-python
+pip install -r requirements_dev.txt
+pip install -e .
+```
+    
