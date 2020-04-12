@@ -95,28 +95,28 @@ logger = logging.getLogger(__name__)
 
 
 class Server(object):
-    def __init__(self, service_name,
-                 url=None, description=None,
-                 variables=None,
-                 variables_spec=None,
-                 al_session_endpoint=False,
-                 session=None):
+    def __init__(self, service_name, spec,
+                 session=None, variables=None):
         self._service_name = service_name
-        self.description = description
+        self._spec = spec
+        self._session = session
+        self._url = spec.get(OpenAPIKeyWord.URL)
+        self._description = spec.get(OpenAPIKeyWord.DESCRIPTION)
+
         if variables:
             self.variables = variables
-        elif variables_spec:
-            self.variables = dict((k, v.get(OpenAPIKeyWord.DEFAULT))
-                                  for (k, v) in variables_spec.items())
+        elif OpenAPIKeyWord.VARIABLES in spec:
+            self.variables = dict(
+                    (k, v.get(OpenAPIKeyWord.DEFAULT))
+                    for k, v in spec[OpenAPIKeyWord.VARIABLES].items())
         else:
-            self.variables = None
+            self.variables = variables
 
-        # Alert Logic extention to use Global Endpoint
-        self._url = \
-            al_session_endpoint and session and \
-            session.get_url(self._service_name) or \
-            url
-        logger.debug(f"Using '{self._url}' URL " +
+        if spec.get(OpenAPIKeyWord.X_ALERTLOGIC_SESSION_ENDPOINT) and \
+                self._session:
+            self._url = self._session.get_url(self._service_name)
+
+        logger.debug(f"Server initialized using '{self._url}' URL " +
                      f"for '{self._service_name}' service.")
 
     @property
@@ -125,6 +125,10 @@ class Server(object):
             return self._url.format(**self.variables)
         else:
             return self._url
+
+    @property
+    def spec(self):
+        return self._spec
 
     def set_url(self, url):
         self._url = url
@@ -672,21 +676,19 @@ class Client(object):
         self.servers = [
             Server(
                 service_name=self._name,
-                url=s.get(OpenAPIKeyWord.URL),
-                description=s.get(OpenAPIKeyWord.DESCRIPTION),
-                variables=variables,
-                variables_spec=s.get(OpenAPIKeyWord.VARIABLES),
-                al_session_endpoint=s.get(
-                        OpenAPIKeyWord.X_ALERTLOGIC_SESSION_ENDPOINT,
-                        False
-                    ),
-                session=self._session
-            )
+                spec=s,
+                session=self._session,
+                variables=variables)
             for s in servers
         ]
 
         if not self._server and self.servers:
-            self._server = self.servers[0]
+            if self._session:
+                self._server = list(
+                        filter(lambda s: self._session.validate_server(s.spec),
+                               self.servers))[0]
+            else:
+                self._server = self.servers[0]
 
         self._initialize_operations()
 

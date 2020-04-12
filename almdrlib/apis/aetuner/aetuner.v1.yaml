@@ -4,19 +4,14 @@ info:
   version: '1.0'
   description: Analytics Engine Tuning Service
 servers:
-  - url: 'https://1llqzoz9s4.execute-api.us-east-1.amazonaws.com/{basePath}'
-    description: aws integration
-    variables:
-      basePath:
-        default: Integration
-  - url: 'https://aetuner.global-services.us-west-2.global.alertlogic.com'
+  - url: 'https://aetuner.mdr.global.alertlogic.com'
+    x-alertlogic-global-endpoint: production
     description: production
-    x-alertlogic-session-endpoint: true
-  - url: 'https://aetuner.api.global-integration.us-west-2.product.dev.alertlogic.com'
+  - url: 'https://aetuner.mdr.product.dev.alertlogic.com'
+    x-alertlogic-global-endpoint: integration
     description: integration
-    x-alertlogic-session-endpoint: true
 paths:
-  '/aetuner/v1/{account_id}/analytics':
+  '/v1/{account_id}/analytics':
     get:
       summary: List Analytics for an account
       tags: []
@@ -77,7 +72,7 @@ paths:
         in: path
         required: true
         description: AIMS Account ID
-  '/aetuner/v1/{account_id}/analytics/{path}':
+  '/v1/{account_id}/analytics/{path}':
     get:
       summary: Get Analytic for a specific customer
       responses:
@@ -122,20 +117,9 @@ paths:
               type: object
               properties:
                 visibility:
-                  type: string
-                  description: Genereate an observation or an incident
-                  enum:
-                    - observation
-                    - incident
+                  $ref: '#/components/schemas/IncidentVisibility'
                 severity:
-                  type: string
-                  description: Severity of the observation/incident genereated by an analytic
-                  enum:
-                    - critical
-                    - high
-                    - medium
-                    - low
-                    - informational
+                  $ref: '#/components/schemas/IncidentSeverity'
                 tuning:
                   type: object
                   description: Tuning Parameters. The list of tuning parameters depends on the analytic being tuned. Tunable options can be seen in `tuning_properties` property of the `analytic` object returned by get_analytic for the analytic.
@@ -143,11 +127,97 @@ paths:
                 reason:
                   type: string
                   description: Reason for the performing the update. This information is used for auditing purposes.
+              required:
+                - reason
         required: true
       description: Update an ananlytic
       x-amazon-apigateway-integration:
         uri:
           'Fn::Sub': 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AETunerUpdateAnalyticFunction.Arn}/invocations'
+  '/v1/{account_id}/incident_types':
+    get:
+      summary: List Incident Types
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                description: List of incident types
+                items:
+                  type: string
+      operationId: list_incident_types
+      description: List all incident types for a specific customer
+      security:
+        - aims_request_authorizer: []
+      x-amazon-apigateway-integration:
+        uri:
+          'Fn::Sub': 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AETunerListIncidentTypesFunction.Arn}/invocations'
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+  '/v1/{account_id}/incident_types/{path}':
+    get:
+      summary: Get Incident Type by Name
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentTypeInfo'
+      operationId: get_incident_type
+      description: "Return incident type for a specific customer by it's name"
+      security:
+        - aims_request_authorizer: []
+      x-amazon-apigateway-integration:
+        uri:
+          'Fn::Sub': 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AETunerGetIncidentTypeFunction.Arn}/invocations'
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+        name: path
+        in: path
+        required: true
+        description: Incident Type Fully Qualified Name
+    post:
+      summary: Update Incident Type properties
+      operationId: update_incident_type
+      responses:
+        '200':
+          description: OK
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                severity:
+                  $ref: '#/components/schemas/IncidentSeverity'
+                visibility:
+                  $ref: '#/components/schemas/IncidentVisibility'
+                reason:
+                  type: string
+                  description: Reason for a change
+              required:
+                - reason
+      security:
+        - aims_request_authorizer: []
+      x-amazon-apigateway-integration:
+        uri:
+          'Fn::Sub': 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AETunerUpdateIncidentTypeFunction.Arn}/invocations'
 components:
   securitySchemes:
     aims_request_authorizer:
@@ -211,4 +281,35 @@ components:
           type: object
         parents:
           type: string
+    IncidentTypeInfo:
+      title: IncidentTypeInfo
+      type: object
+      description: Incident Type Object
+      properties:
+        analytics:
+          type: array
+          description: List of Analytics that can generate this incident type
+          items:
+            type: string
+        severity:
+          $ref: '#/components/schemas/IncidentSeverity'
+        visibility:
+          $ref: '#/components/schemas/IncidentVisibility'
+    IncidentSeverity:
+      type: string
+      title: IncidentSeverity
+      description: Severity of an incident
+      enum:
+        - informational
+        - low
+        - medium
+        - high
+        - critical
+    IncidentVisibility:
+      type: string
+      title: IncidentVisibility
+      description: Visibility of an incident
+      enum:
+        - observation
+        - incident
 

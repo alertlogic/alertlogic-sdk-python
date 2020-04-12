@@ -47,7 +47,7 @@ class Session():
         :param aims_token: aims_token to be used for authentication.
                            If aims_token is specified,
                            access_key_id and secret_key paramters are ignored
-        : param account_id: Alert Logic Account ID to initialize a session for.
+        :param account_id: Alert Logic Account ID to initialize a session for.
                             Unless account_id is provided explicitly
                             during service connection initialization,
                             this account id is used.
@@ -238,9 +238,15 @@ class Session():
 
         return None
 
+    def validate_server(self, spec):
+        if 'x-alertlogic-global-endpoint' not in spec:
+            return True
+
+        return self._global_endpoint == spec['x-alertlogic-global-endpoint']
+
     @staticmethod
     def list_services():
-        return next(os.walk(Config.get_api_dir()))[1]
+        return sorted(next(os.walk(Config.get_api_dir()))[1])
 
     @staticmethod
     def get_service_api(service_name, version=None):
