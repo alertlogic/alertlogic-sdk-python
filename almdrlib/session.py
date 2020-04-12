@@ -47,7 +47,7 @@ class Session():
         :param aims_token: aims_token to be used for authentication.
                            If aims_token is specified,
                            access_key_id and secret_key paramters are ignored
-        : param account_id: Alert Logic Account ID to initialize a session for.
+        :param account_id: Alert Logic Account ID to initialize a session for.
                             Unless account_id is provided explicitly
                             during service connection initialization,
                             this account id is used.
