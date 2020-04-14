@@ -84,7 +84,13 @@ class Session():
 
         # Setup session object
         self._session = requests.Session()
-        retries = Retry(total=5, backoff_factor=1, status_forcelist=[502, 503])
+        retries = Retry(
+                total=5,
+                backoff_factor=1,
+                status_forcelist=[429, 500, 502, 503, 504],
+                method_whitelist=[
+                    "HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS", "TRACE"]
+                )
         self._session.mount('https://', HTTPAdapter(max_retries=retries))
 
         if aims_token:
