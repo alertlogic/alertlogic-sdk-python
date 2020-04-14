@@ -133,7 +133,17 @@ paths:
             type: string
           in: header
           name: content-type
-          description: "The content-type header should be set to the encoding format of the data being sent. \nEach data type, supports a specific set of data encodings that can be specified, and they can be retrieved via the `Get Type Attributes` API\n\n"
+          description: |-
+            The content-type header should be set to the encoding format of the data being sent.
+
+            Each data type, supports a specific set of data encodings that can be specified, and they can be retrieved via the `Get Type Attributes` API
+
+            Below is a list of supported content-types:
+              * alertlogic.com/json
+                * Use to send `auditmsgs`
+              * alertlogic.com/syslog
+                * Use to send `syslog` data
+
           required: true
         - schema:
             type: string
@@ -159,6 +169,9 @@ paths:
                 oneOf:
                   - $ref: '#/components/schemas/AuditMsg'
                   - $ref: '#/components/schemas/FimData'
+          alertlogic.com/syslog:
+            schema:
+              $ref: '#/components/schemas/SyslogMsg'
         description: Data payload
         required: true
     parameters:
@@ -178,6 +191,7 @@ paths:
           Below is the mapping between `type` and `data` models:
 
           * 'auditmsgs' -> AuditMsgs-0.0.2
+          * 'logmsgs' -> SyslogMsg
 components:
   schemas:
     FimData:
@@ -398,8 +412,6 @@ components:
                     type: array
                     items:
                       type: object
-                  '':
-                    type: string
             index:
               type: array
               items:
@@ -429,6 +441,16 @@ components:
             type: string
         searchable:
           type: boolean
+    SyslogMsg:
+      title: SyslogMsg
+      oneOf:
+        - type: string
+          description: "Syslog messages separated by a carriage return `\\n` character"
+        - type: array
+          description: List of syslog messages
+          items:
+            type: string
+      description: Syslog Data Payload
   securitySchemes:
     X-AIMS-Auth-Token:
       name: X-AIMS-Auth-Token
