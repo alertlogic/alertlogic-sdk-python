@@ -223,9 +223,14 @@ class RequestBodySchemaParameter(RequestBodyParameter):
 class RequestBodySimpleParameter(RequestBodyParameter):
     def __init__(self, name, schema, required=False, session=None):
         super().__init__(name, schema, required, session)
+        self._format = schema.get(OpenAPIKeyWord.FORMAT)
 
     def serialize(self, kwargs, header=None):
-        kwargs['data'] = kwargs.pop(self.name, "")
+        data = kwargs.pop(self.name, "")
+        if self._format == 'binary':
+            kwargs['data'] = data.encode()
+        else:
+            kwargs['data'] = data
 
 
 class RequestBodyObjectParameter(RequestBodyParameter):
