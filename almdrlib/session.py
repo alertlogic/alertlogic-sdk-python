@@ -35,6 +35,9 @@ class Session():
     http://docs.python-requests.org/en/master/user/authentication/#new-forms-of-authentication
     """
 
+    _access_key_id = None
+    _secret_key = None
+
     def __init__(
             self, access_key_id=None, secret_key=None, aims_token=None,
             account_id=None, profile=None, global_endpoint=None,
@@ -65,23 +68,6 @@ class Session():
                                  instead of returning response object
         """
 
-        self._config = Config(
-                access_key_id=access_key_id,
-                secret_key=secret_key,
-                account_id=account_id,
-                profile=profile,
-                global_endpoint=global_endpoint,
-                residency=residency)
-
-        self._token = None
-        self._defaults = None
-        self._account_id = self._config.account_id
-        self._residency = self._config.residency
-        self._global_endpoint = self._config.global_endpoint
-        self._global_endpoint_url = Region.get_global_endpoint(
-                                                        self._global_endpoint)
-        self._raise_for_status = raise_for_status
-
         # Setup session object
         self._session = requests.Session()
         retries = Retry(
@@ -93,10 +79,59 @@ class Session():
                 )
         self._session.mount('https://', HTTPAdapter(max_retries=retries))
 
+        # Initialize session's state
+        self._token = None
+        self._defaults = None
+        self._init_session(
+                access_key_id=access_key_id,
+                secret_key=secret_key,
+                aims_token=aims_token,
+                account_id=account_id,
+                profile=profile,
+                residency=residency,
+                raise_for_status=raise_for_status)
+
+    def _init_session(self, *args, **kwargs):
+        """ Initialize session object based on the kwargs provided """
+
+        if not len(kwargs):
+            return
+
+        access_key_id = kwargs.get('access_key_id')
+        secret_key = kwargs.get('secret_key')
+        account_id = kwargs.get('account_id')
+        profile = kwargs.get('profile')
+        global_endpoint = kwargs.get('global_endpoint')
+        residency = kwargs.get('residency', 'us')
+        aims_token = kwargs.get('aims_token')
+
+        self._config = Config(
+                access_key_id=access_key_id,
+                secret_key=secret_key,
+                account_id=account_id,
+                profile=profile,
+                global_endpoint=global_endpoint,
+                residency=residency
+            )
+
+        self._account_id = self._config.account_id
+        self._residency = self._config.residency
+        self._global_endpoint = self._config.global_endpoint
+        self._global_endpoint_url = Region.get_global_endpoint(
+                                                        self._global_endpoint)
+        self._raise_for_status = kwargs.get('raise_for_status')
+
         if aims_token:
             self._token = aims_token
         else:
             self._access_key_id, self._secret_key = self._config.get_auth()
+
+        logger.debug("Initialized session. "
+                     f"access_key_id={self._access_key_id}, "
+                     f"account_id={self._account_id}, "
+                     f"profile={profile}, "
+                     f"global_endpoint={self._global_endpoint}"
+                     )
 
     def _authenticate(self):
         """
@@ -162,6 +197,8 @@ class Session():
         """
         Create Service's client class
         """
+
+        self._init_session(**kwargs)
 
         # Create Service's module
         module_name = service_name.capitalize()

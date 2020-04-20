@@ -86,7 +86,7 @@ class Config():
 
         logger.debug(f"Finished configuraiton initialization. " +
                      f"access_key_id={self._access_key_id}, " +
-                     f"account_id={account_id}, " +
+                     f"account_id={self._account_id}, " +
                      f"global_endpoint={self._global_endpoint}")
 
     def _read_config_file(self):
