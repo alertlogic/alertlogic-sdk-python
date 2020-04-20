@@ -138,7 +138,6 @@ class OperationResponse(object):
     _response_schema = {}
 
     def __init__(self, schema, session=None):
-        logger.debug(f"Initializing response. Spec: {json.dumps(schema)}")
         for r_code, r_schema in schema.items():
             if r_code[0] == '2':
                 self._add_response(r_schema.pop(OpenAPIKeyWord.CONTENT, None))

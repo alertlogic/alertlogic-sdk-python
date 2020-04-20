@@ -11,4 +11,4 @@ pycodestyle==2.5.0
 twine==1.13.0
 configparser==4.0.2
 sphinx_rtd_theme==0.4.3
-m2r==0.2.1
+git+https://github.com/crossnox/m2r@dev#egg=m2r
