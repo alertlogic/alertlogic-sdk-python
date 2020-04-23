@@ -218,6 +218,134 @@ paths:
       x-amazon-apigateway-integration:
         uri:
           'Fn::Sub': 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AETunerUpdateIncidentTypeFunction.Arn}/invocations'
+  '/v1/{account_id}/incident_handling/{path}':
+    get:
+      summary: Get Incident Type Handling Setting
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentTypeHandlingInfo'
+      operationId: get_incident_handling
+      security:
+        - aims_request_authorizer: []
+      description: Return incident type handling setting
+      x-amazon-apigateway-integration:
+        uri:
+          'Fn::Sub': 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AETunerGetIncidentHandlingFunction.Arn}/invocations'
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+        name: path
+        in: path
+        required: true
+        description: Incident Type Fully Qualified Name
+    post:
+      summary: Update Incident Type Handling Setting
+      operationId: update_incident_handling
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stored:
+                    type: string
+                    format: uuid
+                    description: UUID of the stored record
+      description: Set Incident Type handling setting
+      security:
+        - aims_request_authorizer: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                setting:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/IncidentTypeHandlingSetting'
+                reason:
+                  type: string
+                  description: Reason for a change
+              required:
+                - setting
+                - reason
+      x-amazon-apigateway-integration:
+        uri:
+          'Fn::Sub': 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AETunerUpdateIncidentHandlingFunction.Arn}/invocations'
+    delete:
+      summary: Delete Incident Handling Setting
+      operationId: delete_incident_handling
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stored:
+                    type: string
+                    format: uuid
+                    description: UUID of the stored record
+      description: Delete Incident Handling setting
+      security:
+        - aims_request_authorizer: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: Reason for a change
+              required:
+                - reason
+      x-amazon-apigateway-integration:
+        uri:
+          'Fn::Sub': 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AETunerDeleteIncidentHandlingFunction.Arn}/invocations'
+  '/v1/{account_id}/incident_handling':
+    get:
+      summary: Get a list of all incident handling settings for a customer
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                description: List of incident handling settings
+                items:
+                  $ref: '#/components/schemas/IncidentTypeHandlingInfo'
+      operationId: list_incident_handlings
+      security:
+        - aims_request_authorizer: []
+      description: Returns a list of all incident handling settings for a given customer
+      x-amazon-apigateway-integration:
+        uri:
+          'Fn::Sub': 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AETunerListIncidentHandlingsFunction.Arn}/invocations'
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
 components:
   securitySchemes:
     aims_request_authorizer:
@@ -295,6 +423,11 @@ components:
           $ref: '#/components/schemas/IncidentSeverity'
         visibility:
           $ref: '#/components/schemas/IncidentVisibility'
+        path:
+          type: string
+          description: Fully qualifed name of an incident type
+        incident_handling:
+          $ref: '#/components/schemas/IncidentTypeHandlingInfo'
     IncidentSeverity:
       type: string
       title: IncidentSeverity
@@ -312,4 +445,31 @@ components:
       enum:
         - observation
         - incident
+    IncidentTypeHandlingSetting:
+      type: string
+      title: IncidentTypeHandlingSetting
+      description: |-
+        * `auto_soc_close` - is only relevant to incident being shown to SOC or not, no other behaviour or values are affected.
+            If True, will bypass the SOC and become available in the Customer Console.
+        * `auto_escalate` - is only relevant to whether the customer receives an email notification or not, no other behaviour or values are affected.
+            If an incident is escalated, and becomes soc-closed, a notification will be generated with the escalations flag set to True.
+        * `auto_customer_close` - is only relevant to whether the customer sees the incident as “Closed” in the Customer Console or not, no other behaviour or values are affected.
+            If True, the incident will only show in the Customer Console under the 'Closed' filter.
+      enum:
+        - auto_soc_close
+        - auto_escalate
+        - auto_customer_close
+    IncidentTypeHandlingInfo:
+      title: IncidentTypeHandlingInfo
+      type: object
+      description: Incident Type Handling information.
+      properties:
+        settings:
+          type: array
+          description: List of applicable handling settings
+          items:
+            $ref: '#/components/schemas/IncidentTypeHandlingSetting'
+        path:
+          type: string
+          description: Handling preferences path.
 
