@@ -38,6 +38,8 @@ make_documentation(os.path.dirname(os.path.abspath(__file__)))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinxcontrib.contentui',
+    'sphinx_paramlinks',
     'm2r'
 ]
 
