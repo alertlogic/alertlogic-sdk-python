@@ -1065,7 +1065,6 @@ paths:
         A user can only enroll an MFA device if they have not already enrolled one. If the user has already enrolled an MFA device, that device must be removed prior to enrolling a different one.
 
         Once a user enrolls an MFA device, the user is required to provide a valid `mfa_code` during username/password authentication.
-
       requestBody:
         content:
           application/json:
@@ -1263,12 +1262,11 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                  - items:
-                      type: string
-                  - items:
-                      $ref: '#/components/schemas/AccessKey'
                 type: array
+                items:
+                  oneOf:
+                    - type: string
+                    - $ref: '#/components/schemas/AccessKey'
               examples:
                 List Access Keys Response Example:
                   value:

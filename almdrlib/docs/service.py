@@ -1,7 +1,12 @@
 import json
 import logging
 import itertools
-from m2r import convert
+try:
+    from m2r import convert
+except ImportError:
+    def convert(text):
+        return text
+
 from almdrlib.client import OpenAPIKeyWord
 
 logger = logging.getLogger(__name__)
@@ -73,9 +78,11 @@ class ServiceDocGenerator(object):
                     op_name, parameters, self._indent(indent)):
                 yield line
 
-            yield from self._make_request_parameters(parameters, indent)
+            yield from self._make_request_parameters(
+                    op_name, parameters, indent)
 
-            yield from self._make_response(op_spec.get('response', {}), indent)
+            yield from self._make_response(
+                    op_spec.get('response', {}), indent)
 
     def _make_request_syntax(self, name, parameters, indent):
         yield ''
@@ -98,19 +105,175 @@ class ServiceDocGenerator(object):
             yield f'{line}'
         yield f'{indent})'
 
-    def _make_request_parameters(self, parameters, indent):
-        for name, spec in parameters.items():
+    def _make_request_parameters(self, op_name, parameters, indent):
+        indent = self._indent(indent)
+        for name, spec in sorted(parameters.items()):
             yield ''
-            type = get_param_type(spec)
+            if 'content' in spec:
+                type = ' | '.join([
+                        get_param_type(v)
+                        for v in spec['content'].values()
+                    ])
+            else:
+                type = get_param_type(spec)
+
             yield f'{indent}:type {name}: {type}'
             if spec.get('required'):
-                yield f'{indent}:param {name}: **[REQUIRED]**'
+                yield f'{indent}:param {name}:  **[REQUIRED]**'
             else:
                 yield f'{indent}:param {name}:'
             yield ''
 
             for line in convert(spec.get('description', "")).splitlines():
                 yield f'{indent}{indent}{line}'
+
+            yield from self._make_property(
+                    spec, name=name,
+                    declare=False, indent=self._indent(indent))
+
+            if name == 'content_type':
+                yield from self._make_content_type(
+                        op_name,
+                        spec.pop('x-alertlogic-payload-content'),
+                        indent=indent)
+
+            elif 'content' in spec:
+                yield from self._make_request_body_parameter(
+                        spec.pop('content'),
+                        name,
+                        indent=self._indent(indent)
+                    )
+            else:
+                yield from self._make_properties(
+                        spec=spec,
+                        indent=self._indent(indent),
+                        declare=False
+                    )
+
+    def _make_content_type(self, op_name, spec, indent):
+        if not spec:
+            return
+
+        content_indent = self._indent(indent)
+        valid_values = ', '.join([
+                f'``{v}``'
+                for v in spec.keys()]
+            )
+        yield ''
+        yield f'{content_indent}*Valid values*: {valid_values}'
+        yield ''
+        yield f'{content_indent}.. note::'
+        content_indent = self._indent(content_indent)
+        yield (f'{content_indent}Following parameters depend on the'
+               '``content_type`` value:')
+
+        properties = []
+        for property in itertools.chain.from_iterable(spec.values()):
+            if property not in properties:
+                properties.append(property)
+
+        prop_links = [
+                f':paramref:`.{op_name}.{v}`'
+                for v in sorted(properties)
+            ]
+        yield f'{content_indent}{", ".join(prop_links)}'
+
+    def _make_request_body_parameter(self, specs, name, indent=None):
+        yield ''
+        yield f'{indent}Below is specification of ``{name}`` parameter '
+        yield (f"{indent}as it relates to the ``content_type`` "
+               "parameter's value")
+
+        for content_type, spec in specs.items():
+            yield ''
+            spec_indent = self._indent(indent)
+            yield f'{spec_indent}.. toggle-header::'
+
+            title = f'``content_type`` == {content_type}'
+            spec_indent = self._indent(spec_indent)
+            yield f'{spec_indent}:header: {title}'
+
+            yield ''
+            spec_indent = self._indent(spec_indent)
+            yield from self._make_property(spec, indent=spec_indent)
+            yield from self._make_properties(
+                    spec=spec,
+                    indent=self._indent(spec_indent))
+
+    def _make_properties(self, spec, name=None, indent=None, declare=True):
+        type = get_param_type(spec)
+
+        if type == 'list':
+            if 'items' in spec:
+                yield from self._make_property(
+                        spec['items'], name=name, indent=indent)
+                yield from self._make_properties(
+                        spec=spec['items'], indent=self._indent(indent))
+
+            elif 'enum' in spec:
+                yield from self._make_property(spec, indent=indent)
+
+            else:
+                logger.warn(
+                        f"Unknown key for data type for {name}: {type}."
+                        f"{json.dumps(spec, indent=2)}")
+
+        elif type == 'dict':
+            for p_name, p_spec in sorted(spec.get('properties', {}).items()):
+                yield from self._make_property(
+                        spec=p_spec, name=p_name, indent=indent)
+                yield from self._make_properties(
+                        spec=p_spec,
+                        indent=self._indent(indent))
+
+        elif type == 'oneOf' or type == 'anyOf':
+            yield from self._make_indirect_property(
+                    specs=spec.get('oneOf', spec.get('anyOf')),
+                    name=name, indent=indent)
+
+    def _make_indirect_property(self, specs, name=None, indent=None):
+        yield ''
+        yield f'{indent}.. content-tabs::'
+        yield ''
+        for spec in specs:
+            title = spec.get('title', spec.get('type', name))
+            spec_indent = self._indent(indent)
+            yield ''
+            yield f'{spec_indent}.. tab-container:: {title}'
+
+            spec_indent = self._indent(spec_indent)
+            yield f'{spec_indent}:title: {title}'
+            yield from self._make_property(spec, indent=spec_indent)
+            yield from self._make_properties(
+                    spec=spec,
+                    indent=spec_indent)
+
+    def _make_property(self, spec, name=None, indent=None, declare=True):
+        yield ''
+        if declare:
+            type = get_param_type(spec)
+            if name:
+                if 'required' in spec:
+                    yield f'{indent}- **{name}** *({type}) --* **[REQUIRED]**'
+                else:
+                    yield f'{indent}- **{name}** *({type}) --*'
+            else:
+                yield f'{indent}- *({type}) --*'
+
+        indent = self._indent(indent)
+        if declare:
+            yield ''
+            for line in convert(spec.get('description', "")).splitlines():
+                yield f'{indent}{line}'
+
+        if 'enum' in spec:
+            valid_values = ', '.join([f'``{v}``' for v in spec['enum']])
+            yield ''
+            yield f'{indent}*Valid values*: {valid_values}'
+
+        if 'default' in spec:
+            yield ''
+            yield f'{indent}*Default*: ``{spec["default"]}``'
 
     def _make_response(self, spec, indent):
         yield ''
@@ -137,90 +300,25 @@ class ServiceDocGenerator(object):
         yield f'{indent}**Response Definitions**'
         yield ''
 
-        for line in self._make_response_spec(spec, ''):
-            yield f'{indent}{line}'
-
-    def _make_response_spec(self, spec, indent):
-        if 'type' not in spec:
-            if 'oneOf' in spec:
-                _spec = spec['oneOf']
-                yield ''
-                yield f'{indent} * One of the following objects:'
-                yield ''
-            elif 'anyOf' in spec:
-                _spec = spec['anyOf']
-                yield ''
-                yield f'{indent} * Any of the following objects:'
-                yield ''
-            else:
-                logger.warn(f"Unsupported response. {json.dumps(spec)}")
-                return
-
-            indent = self._indent(indent)
-            for t_spec in _spec:
-                yield f'{indent}* ``{t_spec.get("title")}`` -'
-                yield ''
-                for line in convert(
-                        t_spec.get('description', "")).splitlines():
-                    yield f'{indent}{indent}{line}'
-                    yield ''
-
-                yield from self._make_response_parameters(
-                        t_spec.get('properties', {}),
-                        self._indent(indent))
-
-        else:
-            datatype = spec['type']
-            if datatype == 'object':
-                # Dictionary parameter
-                yield f'{indent}- *(dict) --*'
-                yield ''
-                for line in convert(spec.get('description', "")).splitlines():
-                    yield f'{indent}{indent}{line}'
-
-                yield ''
-                yield from self._make_response_parameters(
-                            spec.get('properties', {}),
-                            self._indent(indent))
-
-            if datatype == 'array':
-                yield ''
-                for line in convert(spec.get('description', "")).splitlines():
-                    yield f'{indent}{line}'
-
-                if 'items' in spec:
-                    yield from self._make_response_spec(
-                                spec['items'],
-                                self._indent(indent))
-
-    def _make_response_parameters(self, parameters, indent):
-        for name, spec in parameters.items():
-            yield ''
-            type = get_param_type(spec)
-            if spec.get('required'):
-                yield f'{indent}**{name}** *({type}) --* **[REQUIRED]**'
-            else:
-                yield f'{indent}**{name}** *({type}) --*'
-            yield ''
-
-            for line in convert(spec.get('description', "")).splitlines():
-                yield f'{indent}{indent}{line}'
-            yield ''
-
-            if type == 'dict':
-                yield from self._make_response_parameters(
-                            spec.get('properties', {}),
-                            self._indent(indent))
-
-        yield ''
+        yield from self._make_properties(
+                spec=spec,
+                indent=self._indent(indent))
 
 
 def get_param_spec(spec):
     if OpenAPIKeyWord.ONE_OF in spec:
-        return get_param_spec(spec[OpenAPIKeyWord.ONE_OF][0])
+        types = [get_param_type(v) for v in spec[OpenAPIKeyWord.ONE_OF]]
+        return '|'.join(list(set(sorted(types))))
 
     if OpenAPIKeyWord.ANY_OF in spec:
-        return get_param_spec(spec[OpenAPIKeyWord.ANY_OF][0])
+        types = [get_param_type(v) for v in spec[OpenAPIKeyWord.ANY_OF]]
+        return '|'.join(list(set(sorted(types))))
+
+    if OpenAPIKeyWord.CONTENT in spec:
+        content = spec.get(OpenAPIKeyWord.CONTENT, {})
+        return '|'.join(
+                sorted([get_param_type(v) for v in content.values()])
+            )
 
     param_type = spec.get(OpenAPIKeyWord.TYPE)
     if param_type == OpenAPIKeyWord.ARRAY:
@@ -228,10 +326,10 @@ def get_param_spec(spec):
 
     if param_type == OpenAPIKeyWord.OBJECT:
         properties = spec.get(OpenAPIKeyWord.PROPERTIES, {})
-        return {k: get_param_spec(v) for k, v in properties.items()}
+        return {k: get_param_spec(v) for k, v in sorted(properties.items())}
 
     if param_type == OpenAPIKeyWord.BOOLEAN:
-        return "True|False"
+        return "False|True"
 
     enum = spec.get(OpenAPIKeyWord.ENUM)
     if enum:
@@ -241,15 +339,25 @@ def get_param_spec(spec):
 
 
 def get_param_type(spec):
-    type = spec.get('type', 'object')
+    type = spec.get('type')
     format = spec.get('format')
 
     if type == 'object':
         return 'dict'
     elif type == 'array':
         return 'list'
+    elif format:
+        return format
+    elif type:
+        return type
     else:
-        return format and format or type
+        if 'oneOf' in spec:
+            return 'oneOf'
+        elif 'anyOf' in spec:
+            return 'anyOf'
+        else:
+            raise ValueError(
+                f'Unsupported parameter type. {json.dumps(spec, indent=2)}')
 
 
 def format_json(value, indent=None):

@@ -260,11 +260,18 @@ class RequestBodyObjectParameter(RequestBodyParameter):
         self._required_properties = self._schema.get(
                                             OpenAPIKeyWord.REQUIRED, [])
 
+        if self._properties:
+            for name in self._required_properties:
+                self._properties[name].update(
+                        {OpenAPIKeyWord.REQUIRED: True})
+
         logger.debug(
-                "Initialized body parameter. " +
-                f"Name: {self.name}. " +
-                "Properties: " +
+                "Initialized body parameter. "
+                f"Name: {self.name}. "
+                "Properties: "
                 f"{self._properties and self._properties.keys() or self.name}"
+                "Required Properties: "
+                f"{self._required_properties}"
             )
 
     def serialize(self, kwargs, headers=None):
@@ -299,6 +306,7 @@ class RequestBodyObjectParameter(RequestBodyParameter):
 
 class RequestBody(object):
     def __init__(self, required=False, description=None, session=None):
+        self._parameters = {}
         self._required = required
         self._description = description
         self._session = session
@@ -337,6 +345,11 @@ class RequestBody(object):
 
         self._content[content_type] = parameter
 
+        if name in self._parameters:
+            self._parameters[name].update({content_type: parameter.schema})
+        else:
+            self._parameters[name] = {content_type: parameter.schema}
+
     def serialize(self, headers, kwargs):
         #
         # Get content parameters.
@@ -355,13 +368,30 @@ class RequestBody(object):
         payloadBodyParam.serialize(kwargs, headers)
 
     def get_schema(self):
-        payloadBodyParam = next(iter(self._content.values()))
-        return {
-            OpenAPIKeyWord.PROPERTIES: payloadBodyParam.schema
-        }
+        if len(self._content) == 1:
+            payloadBodyParam = next(iter(self._content.values()))
+            return {OpenAPIKeyWord.PROPERTIES: payloadBodyParam.schema}
 
-    def _get_content_schema(self, content):
-        return {name: property.schema for name, property in content.items()}
+        # Request body supports has multiple content types
+        properties = dict()
+        for name, schema in self._parameters.items():
+            properties[name] = {
+                    'content': {
+                        content_type: parameter.get(name)
+                        for content_type, parameter in schema.items()
+                    }
+                }
+
+        return {
+                OpenAPIKeyWord.PROPERTIES: properties,
+                'x-alertlogic-payload-content': self._get_content_schema()
+            }
+
+    def _get_content_schema(self):
+        return {
+            name: list(property.schema.keys())
+            for name, property in self._content.items()
+        }
 
     def _get_required_properties(self, content):
         return [property.name
@@ -518,10 +548,19 @@ class Operation(object):
 
         if self.body:
             schema = self.body.get_schema()
-            if OpenAPIKeyWord.CONTENT in schema:
-                result.update(schema)
-            else:
-                params_schema.update(schema.get(OpenAPIKeyWord.PROPERTIES))
+            params_schema.update(schema.get(OpenAPIKeyWord.PROPERTIES))
+            payload_content = schema.get('x-alertlogic-payload-content')
+            if payload_content:
+                params_schema['content_type'].update(
+                        {'x-alertlogic-payload-content': payload_content}
+                )
+
+            # if OpenAPIKeyWord.CONTENT in schema:
+                # result.update(schema)
+            # if 'x-alertlogic-payload' in schema:
+            #     params_schema['content_type'].update(schema)
+            # else:
+            #     params_schema.update(schema.get(OpenAPIKeyWord.PROPERTIES))
 
         result.update({
             OpenAPIKeyWord.PARAMETERS: dict(sorted(params_schema.items()))

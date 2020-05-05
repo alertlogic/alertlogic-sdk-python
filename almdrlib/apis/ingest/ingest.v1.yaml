@@ -70,16 +70,17 @@ paths:
               - packet
               - packet_versions
               - export
-            default: 'name, encodings, packet, packet_versions, export'
+            default: '[name, encodings, packet, packet_versions, export]'
+            uniqueItems: true
           in: query
           name: attributes
-          description: 'A list of type attributes to return. This option is used to return a specified set of type attributes instead of all possible type attributes. Possible attributes to query include : name packet_versions encodings fields packet export'
+          description: A list of type attributes to return. This option is used to return a specified set of type attributes instead of all possible type attributes.
         - schema:
             type: string
             default: 1.0.0
           in: query
           name: version
-          description: "This is the version of the packet schema which the user would like to return. \n\nValues can be any of the form int.int.int"
+          description: "This is the version of the packet schema which the user would like to return. \nValues can be any of the form int.int.int"
     parameters:
       - schema:
           type: string
@@ -131,6 +132,9 @@ paths:
             The message can later be retrieved from daccess via the `Read Messages` API
         - schema:
             type: string
+            enum:
+              - alertlogic.com/json
+              - alertlogic.com/syslog
           in: header
           name: content-type
           description: |-
@@ -140,7 +144,7 @@ paths:
 
             Below is a list of supported content-types:
               * alertlogic.com/json
-                * Use to send `auditmsgs`
+                * Use to send `auditmsgs`, `observation` data types
               * alertlogic.com/syslog
                 * Use to send `syslog` data
           required: true
@@ -163,15 +167,16 @@ paths:
           alertlogic.com/json:
             schema:
               type: array
-              description: ' Data to send to the Ingest service'
+              description: Data to send to the Ingest service
               items:
                 oneOf:
                   - $ref: '#/components/schemas/AuditMsg'
                   - $ref: '#/components/schemas/FimData'
+                  - $ref: '#/components/schemas/Observation'
           alertlogic.com/syslog:
             schema:
               $ref: '#/components/schemas/SyslogMsg'
-        description: Data payload
+        description: ''
         required: true
     parameters:
       - schema:
@@ -191,6 +196,7 @@ paths:
 
           * 'auditmsgs' -> AuditMsgs-0.0.2
           * 'logmsgs' -> SyslogMsg
+          * 'observation' -> Observation-1.0.1
 components:
   schemas:
     FimData:
@@ -445,6 +451,93 @@ components:
       title: SyslogMsg
       description: "Syslog messages separated by `\\n`"
       format: binary
+    Observation:
+      title: Observation
+      type: object
+      properties:
+        type:
+          type: string
+        ts:
+          type: integer
+          format: int64
+        id:
+          type: string
+          format: binary
+        cid:
+          type: integer
+          format: int32
+        severity:
+          type: string
+        authority:
+          type: string
+        scope_type:
+          type: string
+        scope:
+          type: array
+          items:
+            type: string
+        start_ts:
+          type: integer
+          format: int64
+        end_ts:
+          type: integer
+          format: int64
+        visibility:
+          type: string
+        class:
+          type: string
+        subclass:
+          type: string
+        summary:
+          type: string
+        description:
+          type: string
+        keys:
+          type: object
+        parents:
+          type: array
+          items:
+            type: string
+        path:
+          type: string
+        recommendation:
+          type: string
+      description: Observation Data Type
+      x-examples:
+        Excessive Logins Observation Example:
+          type: 'security:bf/excessive-logins'
+          ts: 1539162550
+          id: 5D411B77-CC39-4DE2-8264-4A795668C41C
+          cid: 123123
+          severity: low
+          authority: alertlogic/ae/lwa/excessive-logins/1.0
+          scope:
+            - 'arn:aws:ec2:us-east-1:123456789012:instance/i-9b93s3b1'
+            - 'arn:aws:ec2:us-east-1:123456789012:instance/i-9b93s3b2'
+            - 'arn:aws:ec2:us-east-1:123456789012:instance/i-9b93s3b3'
+          start_ts: 1539160500
+          end_ts: 1539161575
+          visibility: prod
+          class: some class
+          subclass: some subclass
+          summary: Excessive login attempts wizard@oz
+          desc: 'The user wizard performed an excessive number (3) of failed login attempts from 95.58.255.62 on the host oz, located in the subnet subnet-2bf56a4, and VPC vpc-1a2b3c4d.'
+          keys:
+            'security:source_ip': 95.58.255.62
+            'security:mechanism': ssh
+            'security:username': wizard
+            'security:host': oz
+          properties:
+            count: 3
+            'security:subnet': subnet-2bf56a4
+            'security:vpc': vpc-1a2b3c4d
+          parents:
+            - 'arn:iws:ingest:us-west-2:123123:logmsgs/095C0608-412E-4A33-81BE-8E95A33790AC'
+            - 'arn:iws:ingest:us-west-2:123123:logmsgs/C52E33E4-EF8B-4437-AFB3-3595EB541107'
+            - 'arn:iws:ingest:us-west-2:123123:logmsgs/02F2DD7E-95AB-4C6F-AD27-ECC22C270D96'
+          path: example_path_string
+          recommendations: Example full description of recommended actions for this observation or incident
+          scope_type: examplescope_type_string
   securitySchemes:
     X-AIMS-Auth-Token:
       name: X-AIMS-Auth-Token
