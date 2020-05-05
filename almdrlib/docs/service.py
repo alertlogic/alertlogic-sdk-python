@@ -3,7 +3,7 @@ import logging
 import itertools
 try:
     from m2r import convert
-except ImportError:
+except Exception as e:
     def convert(text):
         return text
 
