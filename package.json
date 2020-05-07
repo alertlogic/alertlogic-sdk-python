@@ -1,0 +1,28 @@
+{
+  "name": "alertlogic-sdk-python",
+  "version": "1.0.0",
+  "description": "A python SDK for Alert Logic",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "dependencies": {
+    "npx": "^10.2.2",
+    "redoc-cli": "^0.9.6"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alertlogic/alertlogic-python-sdk.git"
+  },
+  "author": "Pavel Trakhtman",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/alertlogic/alertlogic-python-sdk/issues"
+  },
+  "homepage": "https://github.com/alertlogic/alertlogic-python-sdk#readme"
+}
