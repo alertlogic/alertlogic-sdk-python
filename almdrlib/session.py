@@ -256,6 +256,11 @@ class Session():
             headers={},
             cookies={},
             **kwargs):
+
+        # Make sure we've authenticated
+        if self._token is None:
+            self._authenticate()
+
         headers.update({'x-aims-auth-token': self._token})
         logger.debug(f"Calling '{method}' method. " +
                      f"URL: '{url}'. " +
@@ -271,8 +276,9 @@ class Session():
                 **kwargs)
         if self._raise_for_status:
             response.raise_for_status()
-        logger.debug(f"'{method}' method for URL: '{url}' returned " +
-                     f"'{response.status_code}' status code")
+        logger.debug(f"'{method}' method for URL: '{url}' returned "
+                     f"'{response.status_code}' status code "
+                     f"in '{response.elapsed.total_seconds()}' seconds")
         return response
 
     def get_default(self, name):

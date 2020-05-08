@@ -20,7 +20,7 @@ class Config():
 
     Environment Variables:
     ALERTLOGIC_CONFIG - Location of the configuration file. If not specified,
-    ~/.almdrlib/credentials is used
+    ~/.alertlogic/credentials is used
     ALERTLOGIC_PROFILE - Profile to be used.
     If not specified [default] section is used
     ALERTLOGIC_ACCESS_KEY_ID - Acceess Key Id
