@@ -118,7 +118,7 @@ class ServiceDocGenerator(object):
                 type = get_param_type(spec)
 
             yield f'{indent}:type {name}: {type}'
-            if spec.get('required'):
+            if 'required' in spec or 'x-alertlogic-required' in spec:
                 yield f'{indent}:param {name}:  **[REQUIRED]**'
             else:
                 yield f'{indent}:param {name}:'
@@ -253,7 +253,7 @@ class ServiceDocGenerator(object):
         if declare:
             type = get_param_type(spec)
             if name:
-                if 'required' in spec:
+                if 'required' in spec or 'x-alertlogic-required' in spec:
                     yield f'{indent}- **{name}** *({type}) --* **[REQUIRED]**'
                 else:
                     yield f'{indent}- **{name}** *({type}) --*'

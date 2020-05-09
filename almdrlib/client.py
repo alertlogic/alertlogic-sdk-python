@@ -263,7 +263,7 @@ class RequestBodyObjectParameter(RequestBodyParameter):
         if self._properties:
             for name in self._required_properties:
                 self._properties[name].update(
-                        {OpenAPIKeyWord.REQUIRED: True})
+                        {'x-alertlogic-required': True})
 
         logger.debug(
                 "Initialized body parameter. "
