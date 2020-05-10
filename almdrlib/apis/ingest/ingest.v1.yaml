@@ -203,6 +203,23 @@ components:
       title: FimData
       type: object
       description: FIM Event Data Type
+      x-examples:
+        FIM Event Example:
+          ts: 1583953656
+          host_id: 4a053698-59e2-4a82-b781-edb5e66715ca
+          event_type: example_event_type
+          path: example/path
+          file_type: example_file_type
+          file_name: example_file_name
+          file_size: 123
+          file_owner: example_file_owner
+          file_group: example_file_group
+          file_permissions: 777
+          file_attributes: 444
+          file_ctime: 1583953653
+          file_atime: 1583953654
+          file_mtime: 1583953655
+          sha1_hash: 6bf26de67c119d28fa37985dff7fd6aa44a00b99
       properties:
         ts:
           type: integer
@@ -236,24 +253,12 @@ components:
           type: string
       required:
         - ts
+        - event_type
         - path
-      x-examples:
-        FIM Event Example:
-          ts: 1583953656
-          host_id: 4a053698-59e2-4a82-b781-edb5e66715ca
-          event_type: example_event_type
-          path: example/path
-          file_type: example_file_type
-          file_name: example_file_name
-          file_size: 123
-          file_owner: example_file_owner
-          file_group: example_file_group
-          file_permissions: 777
-          file_attributes: 444
-          file_ctime: 1583953653
-          file_atime: 1583953654
-          file_mtime: 1583953655
-          sha1_hash: 6bf26de67c119d28fa37985dff7fd6aa44a00b99
+        - file_name
+        - file_owner
+        - file_permissions
+        - sha1_hash
     AuditMsg:
       title: AuditMsg
       description: Audit Messages Data Type
@@ -454,6 +459,42 @@ components:
     Observation:
       title: Observation
       type: object
+      description: Observation Data Type
+      x-examples:
+        Excessive Logins Observation Example:
+          type: 'security:bf/excessive-logins'
+          ts: 1539162550
+          id: 5D411B77-CC39-4DE2-8264-4A795668C41C
+          cid: 123123
+          severity: low
+          authority: alertlogic/ae/lwa/excessive-logins/1.0
+          scope:
+            - 'arn:aws:ec2:us-east-1:123456789012:instance/i-9b93s3b1'
+            - 'arn:aws:ec2:us-east-1:123456789012:instance/i-9b93s3b2'
+            - 'arn:aws:ec2:us-east-1:123456789012:instance/i-9b93s3b3'
+          start_ts: 1539160500
+          end_ts: 1539161575
+          visibility: prod
+          class: some class
+          subclass: some subclass
+          summary: Excessive login attempts wizard@oz
+          desc: 'The user wizard performed an excessive number (3) of failed login attempts from 95.58.255.62 on the host oz, located in the subnet subnet-2bf56a4, and VPC vpc-1a2b3c4d.'
+          keys:
+            'security:source_ip': 95.58.255.62
+            'security:mechanism': ssh
+            'security:username': wizard
+            'security:host': oz
+          properties:
+            count: 3
+            'security:subnet': subnet-2bf56a4
+            'security:vpc': vpc-1a2b3c4d
+          parents:
+            - 'arn:iws:ingest:us-west-2:123123:logmsgs/095C0608-412E-4A33-81BE-8E95A33790AC'
+            - 'arn:iws:ingest:us-west-2:123123:logmsgs/C52E33E4-EF8B-4437-AFB3-3595EB541107'
+            - 'arn:iws:ingest:us-west-2:123123:logmsgs/02F2DD7E-95AB-4C6F-AD27-ECC22C270D96'
+          path: example_path_string
+          recommendations: Example full description of recommended actions for this observation or incident
+          scope_type: examplescope_type_string
       properties:
         type:
           type: string
@@ -502,42 +543,19 @@ components:
           type: string
         recommendation:
           type: string
-      description: Observation Data Type
-      x-examples:
-        Excessive Logins Observation Example:
-          type: 'security:bf/excessive-logins'
-          ts: 1539162550
-          id: 5D411B77-CC39-4DE2-8264-4A795668C41C
-          cid: 123123
-          severity: low
-          authority: alertlogic/ae/lwa/excessive-logins/1.0
-          scope:
-            - 'arn:aws:ec2:us-east-1:123456789012:instance/i-9b93s3b1'
-            - 'arn:aws:ec2:us-east-1:123456789012:instance/i-9b93s3b2'
-            - 'arn:aws:ec2:us-east-1:123456789012:instance/i-9b93s3b3'
-          start_ts: 1539160500
-          end_ts: 1539161575
-          visibility: prod
-          class: some class
-          subclass: some subclass
-          summary: Excessive login attempts wizard@oz
-          desc: 'The user wizard performed an excessive number (3) of failed login attempts from 95.58.255.62 on the host oz, located in the subnet subnet-2bf56a4, and VPC vpc-1a2b3c4d.'
-          keys:
-            'security:source_ip': 95.58.255.62
-            'security:mechanism': ssh
-            'security:username': wizard
-            'security:host': oz
-          properties:
-            count: 3
-            'security:subnet': subnet-2bf56a4
-            'security:vpc': vpc-1a2b3c4d
-          parents:
-            - 'arn:iws:ingest:us-west-2:123123:logmsgs/095C0608-412E-4A33-81BE-8E95A33790AC'
-            - 'arn:iws:ingest:us-west-2:123123:logmsgs/C52E33E4-EF8B-4437-AFB3-3595EB541107'
-            - 'arn:iws:ingest:us-west-2:123123:logmsgs/02F2DD7E-95AB-4C6F-AD27-ECC22C270D96'
-          path: example_path_string
-          recommendations: Example full description of recommended actions for this observation or incident
-          scope_type: examplescope_type_string
+      required:
+        - type
+        - ts
+        - id
+        - cid
+        - severity
+        - authority
+        - scope
+        - start_ts
+        - end_ts
+        - visibility
+        - class
+        - path
   securitySchemes:
     X-AIMS-Auth-Token:
       name: X-AIMS-Auth-Token
