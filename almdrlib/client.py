@@ -825,7 +825,7 @@ _YamlOrderedLoader.add_constructor(
 )
 
 
-def _get_spec(file_path, encoding=None):
+def _get_spec(file_path, encoding="utf8"):
     with io.open(file_path, 'rt', encoding=encoding) as stream:
         return yaml.load(stream, _YamlOrderedLoader)
 
