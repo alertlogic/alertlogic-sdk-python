@@ -1,0 +1,301 @@
+openapi: 3.0.2
+info:
+  title: Kalm Service
+  version: '1.0'
+  contact:
+    email: support@alertlogic.com
+  description: HTTP interface for BI Data
+servers:
+  - url: 'https://api.cloudinsight.alertlogic.com'
+    description: production
+    x-alertlogic-session-endpoint: true
+  - url: 'https://api.product.dev.alertlogic.com'
+    description: integration
+    x-alertlogic-session-endpoint: true
+paths:
+  '/kalm/v1/{account_id}/named_query/{query_name}':
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+        name: query_name
+        in: path
+        required: true
+        description: Named query name
+    get:
+      summary: Get named query
+      tags: [Catalog]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NamedQuery'
+              examples:
+                Get named query by name:
+                  value:
+                    name: test_named_query
+                    description: Query description
+                    query:
+                      select:
+                        - deployment_name
+                        - asset_name
+                        - as:
+                            - count: asset_name
+                            - asset_count
+                      from: v_vulnerability_by_date_range
+                      where:
+                        =:
+                          - asset_type
+                          - $asset_type_param
+                      group_by:
+                        - deployment_name
+                        - asset_name
+                      order_by:
+                        - asset_count: desc
+                      limit: 10
+                    key_spec:
+                      - key: asset_type_param
+                        description: Parameter description
+                        type: string
+      operationId: get-kalm-v1-account_id-named_query-query_name
+      security:
+        - X-AIMS-Auth-Token: []
+      description: Returns named query
+  '/kalm/v1/{account_id}/table/{table_name}':
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+        name: table_name
+        in: path
+        required: true
+        description: Table name
+    get:
+      summary: Get table
+      tags: [Catalog]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Table'
+              examples:
+                Get table:
+                  value:
+                    name: sample_table
+                    columns:
+                      account_id: bigint
+                      environment_id: string
+      operationId: get-kalm-v1-account_id-table-table_name
+      security:
+        - X-AIMS-Auth-Token: []
+      description: Returns table
+  '/kalm/v1/{account_id}/named_query':
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+    get:
+      summary: List named queries
+      tags: [Catalog]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NamedQuery'
+              examples:
+                List named queries:
+                  value:
+                    - name: test_named_query
+                      description: Query description
+                      query:
+                        select:
+                          - deployment_name
+                          - asset_name
+                          - as:
+                              - count: asset_name
+                              - asset_count
+                        from: v_vulnerability_by_date_range
+                        where:
+                          =:
+                            - asset_type
+                            - $asset_type_param
+                        group_by:
+                          - deployment_name
+                          - asset_name
+                        order_by:
+                          - asset_count: desc
+                        limit: 10
+                      key_spec:
+                        - key: asset_type_param
+                          description: Parameter description
+                          type: string
+      operationId: get-kalm-v1-account_id-named_query
+      description: Returns list of named queries
+      security:
+        - X-AIMS-Auth-Token: []
+  '/kalm/v1/{account_id}/table':
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+    get:
+      summary: List tables
+      tags: [Catalog]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Table'
+              examples:
+                List tables:
+                  value:
+                    - name: sample_table
+                      columns:
+                        account_id: bigint
+                        environment_id: string
+      operationId: get-kalm-v1-account_id-table
+      description: Returns list of available tables.
+      security:
+        - X-AIMS-Auth-Token: []
+  '/kalm/v1/{account_id}/query/{named_or_table_query}':
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+        name: named_or_table_query
+        in: path
+        required: true
+        description: Named query or existing table name
+    get:
+      summary: Run named or table query
+      tags: [Query]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResult'
+              examples:
+                Run query for named query:
+                  value:
+                    column_info:
+                      - name: environment_id
+                        type: varchar
+                      - name: asset_key
+                        type: varchar
+                    rows:
+                      - - environment_id
+                        - asset_key
+                      - - 71B0F87C-E015-4368-9672-6A5863B7AAD9
+                        - /aws/us-west-2/sg/sg-07f0b89cae6a8415d
+                      - - 71B0F87C-E015-4368-9672-6A5863B7AAD9
+                        - /aws/us-west-2/host/i-0008b17e2d0943ad8
+      operationId: get-kalm-v1-account_id-query-named_or_table_query
+      description: 'Runs query and returns query results for named query or existing table. For named queries additional query parameters with a single value each can be passed. If the parameter is not passed then its key is considered as `NULL`'
+      security:
+        - X-AIMS-Auth-Token: []
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: managed_accounts
+          description: |-
+            A query parameter defining whether return query data for all managed accounts for specified account-id. Possible values:
+
+            * `true` - return data for account-id and its managed accounts
+            * `children_only` - return data for managed accounts only
+            * `false` - return data for specified account-id only
+            Default value: `false`
+components:
+  schemas:
+    NamedQuery:
+      title: NamedQuery
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        key_spec:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              description:
+                type: string
+              type:
+                type: string
+    Table:
+      title: Table
+      type: object
+      properties:
+        name:
+          type: string
+        columns:
+          type: object
+    QueryResult:
+      title: QueryResult
+      type: object
+      properties:
+        column_info:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              type:
+                type: string
+        rows:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+  securitySchemes:
+    X-AIMS-Auth-Token:
+      name: X-AIMS-Auth-Token
+      type: apiKey
+      in: header
+      description: AIMS Authentication Token
+tags:
+  - name: Catalog
+    description: Kalm Catalog Operations
+  - name: Query
+    description: Query Data Operations
