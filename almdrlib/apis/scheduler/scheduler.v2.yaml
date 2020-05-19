@@ -1,0 +1,634 @@
+openapi: 3.0.2
+info:
+  title: ScanScheduler Service
+  version: '2.0'
+  description: 'Advanced Scan Scheduling API'
+  contact:
+    email: support@alertlogic.com
+    name: Alert Logic Support
+servers:
+  - url: 'https://api.cloudinsight.alertlogic.com'
+    description: us-production
+    x-alertlogic-session-endpoint: true
+  - url: 'https://api.cloudinsight.alertlogic.co.uk'
+    description: uk-production
+    x-alertlogic-session-endpoint: true
+  - url: 'https://api.cloudinsight.product.dev.alertlogic.com'
+    description: integration
+    x-alertlogic-session-endpoint: true
+paths:
+  '/scheduler/v2/{account_id}/{deployment_id}/schedules':
+    get:
+      summary: Returns a list of scan schedules
+      tags: [Scheduling]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Schedule'
+      operationId: list_schedules
+      description: Lists scan schedules that belong to a particular deployment
+      security:
+        - X-AIMS-Auth-Token: []
+      parameters:
+        - name: return_fields
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - id
+                - name
+                - enabled
+                - scan_frequency
+                - scan_window
+                - scope
+          in: query
+          style: form
+          explode: false
+          description: |-
+            Allows to specify fields of `Schedule` objects that will be returned
+            by the API. Please note `id` is a default field and is always
+            returned. If no `return_fields` parameter is specified the entire `Schedule` object
+            will be returned.
+          required: false
+    post:
+      summary: 'Creates a scan schedule'
+      tags: [Scheduling]
+      operationId: create_schedule
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+        '400':
+          description: Bad request - invalid/missing fields
+        '404':
+          description: Deployment not found
+              
+      description: Create new Scan Schedule for a given deployment
+      security:
+        - X-AIMS-Auth-Token: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Schedule'
+    parameters:
+      - name: account_id
+        schema:
+          type: string
+        in: path
+        required: true
+      - name: deployment_id
+        schema:
+          type: string
+          format: uuid
+        in: path
+        required: true
+  
+  '/scheduler/v2/{account_id}/{deployment_id}/schedules/{id}':
+    get:
+      summary: Returns a selected scan schedule
+      tags: [Scheduling]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+        '404':
+          description: Schedule not found
+      operationId: get_schedule
+      description: Returns the scan schedule definition for a given `id`.
+      security:
+        - X-AIMS-Auth-Token: []
+    delete:
+      summary: 'Deletes a selected scan schedule'
+      tags: [Scheduling]
+      operationId: delete_schedule
+      responses:
+        '204':
+          description: No Content
+        '404':
+          description: Schedule not found
+      description: Deletes Selected Schedule.
+      security:
+        - X-AIMS-Auth-Token: []
+    put:
+      summary: 'Updates a selected scan schedule'
+      tags: [Scheduling]
+      operationId: update_schedule
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+        '400':
+          description: Bad request - invalid/missing fields
+        '404':
+          description: Schedule not found
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - name: account_id
+        schema:
+          type: string
+        in: path
+        required: true
+      - name: deployment_id
+        schema:
+          type: string
+          format: uuid
+        in: path
+        required: true
+      - name: id
+        schema:
+          type: string
+          format: uuid
+        in: path
+        required: true
+  '/scheduler/v2/{account_id}/{deployment_id}/schedules/{id}/summary':
+    get:
+      summary: Returns a summary of the selected schedule
+      tags: [Scan Summary - Preview]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleSummary'
+        '404':
+          description: Schedule not found
+      operationId: get_schedule_summary
+      description: Returns a summary of the selected schedule specified by `id`.
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - name: account_id
+        schema:
+          type: string
+        in: path
+        required: true
+      - name: deployment_id
+        schema:
+          type: string
+          format: uuid
+        in: path
+        required: true
+      - name: id
+        schema:
+          type: string
+          format: uuid
+        in: path
+        required: true
+
+components:
+  schemas:
+    ScheduleSummary:
+      title: Schedule Summary
+      description: |-
+        Provides a summary of outcomes for a given schedule `id`.
+        For instance what is the scope of the schedule, its status, and SLA.
+      type: object
+      properties:
+        hosts_number:
+          type: integer
+          description: |-
+            The total number of scannable hosts that are in the scope
+            of a given schedule.
+          example: 964
+        hosts_in_sla:
+          type: integer
+          description: |-
+            Number of hosts that have met the SLA specified by `scan_frequency`
+            parameter.
+          example: 950
+        hosts_excluded:
+          type: integer
+          description: |-
+            Number of hosts that are excluded and are not counted
+            into the SLA specified by `scan_frequency` parameter.
+            parameter.
+          example: 14
+        last_scan_date:
+          type: string
+          format: date-time
+          description: |-
+            Timestamp of the last successful scan executed within the scope of 
+            the schedule.
+        next_scan_date:
+          type: string
+          format: date-time
+          description: |-
+            Timestamp describing the next planned scan execution within the scope of 
+            the schedule.
+        status:
+          type: string
+          enum:
+            - disabled
+            - idle
+            - in_progress
+          example: in_progress
+
+    ScanWindow:
+      title: Scan Window
+      description: |-
+        Scan Window specifies when assets within a scope of a schedule should be scanned,
+        adhering to the `scan_frequency` parameter.
+        Depending on the `type_of_window` parameter different time windows
+        can be specified.
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - days_of_week
+            - days_of_month
+            - weekly_period
+            - monthly_period
+          
+
+    ScanWindowSelectedDaysOfWeek:
+      allOf:
+        - $ref: '#/components/schemas/ScanWindow'
+        - type: object
+          required:
+            - type
+            - start_time
+            - end_time
+            - start_day
+            - days_of_week
+      type: object
+      title: ScanWindowSelectedDaysOfWeek
+      description: |-
+        Scan window for selected days of week, with daily start and end times.
+        Effectively the window will be active every day according
+        to `days_of_week` list, between specified times `start_time` and `end_time`.
+      properties:
+        type:
+          type: string
+          enum:
+            - days_of_week
+        start_time:
+          type: string
+          format: time
+          description: |- 
+            Time of day when recurring scanning window commences (24h format)
+          example: "17:00"
+        end_time:
+          type: string
+          format: time
+          description: |- 
+            Time of day when recurring scanning window ends (24h format)
+          example: "05:00"
+        days_of_week:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+            maximum: 7
+          description: |-
+            Days of week when recurring scanning window should be active (`1 - 7`,
+            where `1` is Monday and `7` is Sunday)
+          example:
+            - 1
+            - 3
+            - 4
+    
+    ScanWindowSelectedDaysOfMonth:
+      allOf:
+        - $ref: '#/components/schemas/ScanWindow'
+        - type: object
+          required:
+            - type
+            - start_time
+            - end_time
+            - start_day
+            - days_of_month
+      type: object
+      title: ScanWindowSelectedDaysOfMonth
+      description: |-
+        Scan window for selected days of month, with daily start and end times.
+        Effectively the window will be active every day according
+        to `days_of_month` list, between specified times `start_time` and `end_time`.
+      properties:
+        type:
+          type: string
+          enum:
+            - days_of_month
+        start_time:
+          type: string
+          format: time
+          description: |- 
+            Time of day when recurring scanning window commences (24h format)
+          example:
+            "12:00"
+        end_time:
+          type: string
+          format: time
+          description: |- 
+            Time of day when recurring scanning window ends (24h format)
+        days_of_month:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+            maximum: 31
+          description: |-
+            Days of month when recurring scanning window should be active (`1 - 31`)
+          example:
+            - 1
+            - 15
+    
+    ScanWindowContinuousPeriodWeekly:
+      allOf:
+        - $ref: '#/components/schemas/ScanWindow'
+        - type: object
+          required:
+            - type
+            - start_time
+            - end_time
+            - start_day
+            - end_day
+      type: object
+      title: ScanWindowContinuousPeriodWeekly
+      description: |-
+        Scan window for continuous period between two days of week.
+        Effectively the window will allow scans to occur continuously
+        between `start_day`/`start_time` and `end_day`/`end_time`.
+      properties:
+        type:
+          type: string
+          enum:
+            - weekly_period
+        start_day:
+          type: integer
+          minimum: 1
+          maximum: 7
+          example: 5
+          description: |- 
+            Day of week when continuous scanning window commences (`1 - 7`,
+            where `1` is Monday and `7` is Sunday)
+        start_time:
+          type: string
+          format: time
+          example: "18:00"
+          description: |- 
+            Time of day when continuous scanning window commences (24h format)
+        end_day:
+          type: integer
+          minimum: 1
+          maximum: 7
+          example: 1
+          description: |- 
+            Day of week when continuous scanning window ends (`1 - 7`,
+            where `1` is Monday and `7` is Sunday)
+        end_time:
+          type: string
+          format: time
+          example: "07:00"
+          description: |- 
+            Time of day when continuous scanning window ends (24h format)
+          
+    
+    ScanWindowContinuousPeriodMonthly:
+      allOf:
+        - $ref: '#/components/schemas/ScanWindow'
+        - type: object
+          required:
+            - type
+            - start_time
+            - start_day
+            - end_time
+            - end_day
+      type: object
+      title: ScanWindowContinuousPeriodMonthly
+      description: |-
+        Scan window for continuous period between two days of month, with start time/day and end time/day.
+      properties:
+        type:
+          type: string
+          enum:
+            - monthly_period
+        start_day:
+          type: integer
+          minimum: 1
+          maximum: 31
+          example: 27
+          description: Day of month when continuous scanning window commences (`1 - 31`)
+        start_time:
+          type: string
+          format: time
+          example: "7:00"
+          description: Time of day when continuous scanning window commences (24h format)
+        end_day:
+          type: integer
+          minimum: 1
+          maximum: 31
+          example: 31
+          description: Day of month when continuous scanning window ends (`1 - 31`)
+        end_time:
+          type: string
+          format: time
+          example: "10:00"
+          description: Time of day when continuous scanning window ends (24h)
+    
+    ScanScopeItem:
+      title: ScanScopeItem
+      description: |-
+        Element of `scan_scope` list that specifies which assets should
+        be taken into account when a given scan schedule is concerned.
+        Please note that `ScanAsset` might be either a concrete asset i.e.
+        `deployment`, `network`, `subnet`, `host`, or can be an abstract
+        asset qualificator such as `CIDR` range or a tag.
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - asset
+            - cidr
+            - tag
+          
+    ScanScopeItemAsset:
+      allOf:
+        - $ref: '#/components/schemas/ScanScopeItem'
+        - type: object
+          required:
+            - type
+            - key
+          properties:
+            key:
+              type: string
+              example: "/aws/us-east-1/subnet/sub-03acf31d311531"
+            type:
+              type: string
+              enum:
+                - asset
+              
+              
+    ScanScopeItemCIDR:
+      allOf:
+        - $ref: '#/components/schemas/ScanScopeItem'
+        - type: object
+          required:
+            - value
+          properties:
+            value:
+              type: string
+              example: "10.0.0.1/24"
+            type:
+              type: string
+              enum:
+                - cidr
+          
+    ScanScopeItemTag:
+      allOf:
+        - $ref: '#/components/schemas/ScanScopeItem'
+        - type: object
+          properties:
+            key:
+              type: string
+              example: "Name"
+            value:
+              type: string
+              example: "ProductionHost"
+            type:
+              type: string
+              enum:
+                - tag
+              
+    ScanScope:
+      type: object
+      description: |-
+        Specifies what assets are considered to be scanned within designated periods
+        defined by `scan_windows` parameter, setting the SLA as specified by `scan_frequency`
+        parameter.
+      properties:
+        include_future_assets:
+          type: boolean
+          example: true
+        include:
+          type: array
+          items:
+            anyOf: 
+              - $ref: '#/components/schemas/ScanScopeItemAsset'
+              - $ref: '#/components/schemas/ScanScopeItemCIDR'
+              - $ref: '#/components/schemas/ScanScopeItemTag'
+        exclude:
+          type: array
+          items:
+            anyOf: 
+              - $ref: '#/components/schemas/ScanScopeItemAsset'
+              - $ref: '#/components/schemas/ScanScopeItemCIDR'
+              - $ref: '#/components/schemas/ScanScopeItemTag'
+          
+    Schedule:
+      title: ScanSchedule
+      description: |-
+        Scan Schedule definition.
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          example: My Advanced Internal Scan Schedule 01
+        enabled:
+          type: boolean
+          description: |- 
+            Specifies whether the schedule is active or not.
+          default: true
+        type_of_scan:
+          type: string
+          description: |- 
+            Specifies which type of scan the schedule should apply to. There
+            are 3 types of scans
+              - `vulnerability` - internal network scan. Requires an appliance to be deployed
+                within a customer's network. Primary target are assets of `host` type that are in the scope of the schedule and within the scope of protection of the deployment.
+              - `external` - external network scan. Does not require appliances to be deployed,
+                as it is performed from within Alert Logic network against external assets.
+                Primary target are assets of `external-ip` and `external-dns-name` types
+                that are in the scope of the schedule and within the scope of protection
+                of the deployment.
+              - `discovery` - internal host-lookup scan. Requires an appliance to be deployed
+                within a customer's network. Specific only to `datacenter` type of
+                deployment, where cloud API cannot be used to enumerate assets.
+                Used primarily to find active hosts in networks that are in the scope of 
+                protection of the deployment. Primary target are assets of `network` or `vpc`
+                type.
+          enum:
+            - vulnerability
+            - external
+            - discovery
+        scan_frequency:
+          type: string
+          description: |-
+            Specifies the SLA period of how frequently consecutive scans should target
+            individual targets within the deployment. Depending on characteristicts of the
+            workload or its compliance and security requirements, different targets
+            (e.g. hosts, external ip addresses, networks) of a certain scanning scope
+            (e.g. hosts within certain subnets or belonging to certain CIDR ranges)
+            may require different frequency of scans. 
+            
+            By setting `scan_frequency` to `weekly`,
+            Alert Logic will aim to scan each target within the scope of a Scan Schedule
+            once every 7 days (168 hours), adhering to the date/time constraints specified
+            by `scan_windows` parameter. 
+            
+            Please note when the same host effectively
+            belongs to two distinct Scan Schedules, the higher frequency (e.g. daily over weekly)
+            will be respected for both schedules and union of `scan_windows` will be considered
+            as time periods when scans will be allowed to occur.
+          enum:
+            - automatic
+            - daily
+            - weekly
+            - monthly
+          example: weekly
+        scan_windows:
+          description: |-
+            Specifies the time periods when the Scan Schedule should be active.
+            Please note there are four types of `scan_windows`, defined as following
+            models:
+            - `ScanWindowSelectedDaysOfWeek`
+            - `ScanWindowSelectedDaysOfMonth`
+            - `ScanWindowContinuousPeriodWeekly`
+            - `ScanWindowContinuousPeriodMonthly`
+            
+            For details please refer to the documentation of the above models.
+          type: array
+          items:
+            anyOf:
+            - $ref: '#/components/schemas/ScanWindowSelectedDaysOfWeek'
+            - $ref: '#/components/schemas/ScanWindowSelectedDaysOfMonth'
+            - $ref: '#/components/schemas/ScanWindowContinuousPeriodWeekly'
+            - $ref: '#/components/schemas/ScanWindowContinuousPeriodMonthly'
+        scan_scope:
+          type: object
+          description: |-
+            Specifies what assets are considered to be scanned within designated periods
+            defined by `scan_windows` parameter, setting the SLA as specified by `scan_frequency`
+            parameter.
+          allOf:
+            - $ref: '#/components/schemas/ScanScope'
+
+  securitySchemes:
+    X-AIMS-Auth-Token:
+      name: X-AIMS-Auth-Token
+      type: apiKey
+      in: header
+      description: AIMS Authentication Token
