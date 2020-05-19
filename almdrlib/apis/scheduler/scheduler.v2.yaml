@@ -192,11 +192,56 @@ paths:
           format: uuid
         in: path
         required: true
+      - name: return_fields
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+              - hosts_number
+              - hosts_in_sla
+              - hosts_excluded
+              - last_scan_date
+              - next_scan_date
+              - status
+        in: query
+        style: form
+        explode: false
+        description: |-
+          Allows to specify which of the fields of `ScheduleSummary` object will be returned
+          by the API. If no `return_fields` parameter is specified the entire `ScheduleSummary` 
+          object will be returned.
+        required: false
+  '/scheduler/v2/supported_time_zones':
+    get:
+      summary: List of time zones.
+      tags: [Time Zones]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TimeZone'
+      operationId: get_supported_time_zones
+      description: |-
+        Returns a list of time zones that are supported by Scan Scheduler and
+        can be consequently used in `ScanWindow` objects. TODO to include time_zones in `ScanWindow`s.
+      security:
+        - X-AIMS-Auth-Token: []
 
 components:
   schemas:
+    TimeZone:
+      title: TimeZone
+      description: |-
+        Time zone object. TBD
+      type: object
+  
     ScheduleSummary:
-      title: Schedule Summary
+      title: ScheduleSummary
       description: |-
         Provides a summary of outcomes for a given schedule `id`.
         For instance what is the scope of the schedule, its status, and SLA.
@@ -242,7 +287,7 @@ components:
           example: in_progress
 
     ScanWindow:
-      title: Scan Window
+      title: ScanWindow
       description: |-
         Scan Window specifies when assets within a scope of a schedule should be scanned,
         adhering to the `scan_frequency` parameter.
@@ -346,7 +391,11 @@ components:
             minimum: 1
             maximum: 31
           description: |-
-            Days of month when recurring scanning window should be active (`1 - 31`)
+            Days of month when recurring scanning window should be active (`1 - 31`).
+            If selected day is not applicable to the month, the nearest date will be
+            used instead. E.g. a scan set to run on the "30th" will run February 28th.
+            For API consumer's convenience `31` will ALWAYS be considered as the 
+            END_OF_MONTH wildcard.
           example:
             - 1
             - 15
@@ -426,7 +475,12 @@ components:
           minimum: 1
           maximum: 31
           example: 27
-          description: Day of month when continuous scanning window commences (`1 - 31`)
+          description: |-
+            Day of month when continuous scanning window commences (`1 - 31`).
+            If selected day is not applicable to the month, the nearest date will be
+            used instead. E.g. a scan set to run on the "30th" will run February 28th.
+            For API consumer's convenience `31` will ALWAYS be considered as the 
+            END_OF_MONTH wildcard.
         start_time:
           type: string
           format: time
@@ -437,7 +491,12 @@ components:
           minimum: 1
           maximum: 31
           example: 31
-          description: Day of month when continuous scanning window ends (`1 - 31`)
+          description: |-
+            Day of month when continuous scanning window ends (`1 - 31`)
+            If selected day is not applicable to the month, the nearest date will be
+            used instead. E.g. a scan set to run on the "30th" will run February 28th.
+            For API consumer's convenience `31` will ALWAYS be considered as the 
+            END_OF_MONTH wildcard.
         end_time:
           type: string
           format: time
@@ -451,7 +510,7 @@ components:
         be taken into account when a given scan schedule is concerned.
         Please note that `ScanAsset` might be either a concrete asset i.e.
         `deployment`, `network`, `subnet`, `host`, or can be an abstract
-        asset qualificator such as `CIDR` range or a tag.
+        asset qualificator such as `IP` range, `CIDR` range or a `tag`.
       type: object
       properties:
         type:
@@ -459,6 +518,7 @@ components:
           enum:
             - asset
             - cidr
+            - ip_range
             - tag
           
     ScanScopeItemAsset:
@@ -492,6 +552,25 @@ components:
               type: string
               enum:
                 - cidr
+                
+    ScanScopeItemIPRange:
+      allOf:
+        - $ref: '#/components/schemas/ScanScopeItem'
+        - type: object
+          required:
+            - from_ip
+            - to_ip
+          properties:
+            from_ip:
+              type: string
+              example: "10.0.0.1"
+            to_ip:
+              type: string
+              example: "10.0.0.100"
+            type:
+              type: string
+              enum:
+                - ip_range
           
     ScanScopeItemTag:
       allOf:
@@ -516,22 +595,20 @@ components:
         defined by `scan_windows` parameter, setting the SLA as specified by `scan_frequency`
         parameter.
       properties:
-        include_future_assets:
+        include_all_assets:
           type: boolean
-          example: true
+          description: |-
+            When set to `true` all assets in the scope of deployment's protection are
+            included within the schedule. Values specified in `include` array will not
+            be taken into account.
+          example: false
         include:
           type: array
           items:
             anyOf: 
               - $ref: '#/components/schemas/ScanScopeItemAsset'
               - $ref: '#/components/schemas/ScanScopeItemCIDR'
-              - $ref: '#/components/schemas/ScanScopeItemTag'
-        exclude:
-          type: array
-          items:
-            anyOf: 
-              - $ref: '#/components/schemas/ScanScopeItemAsset'
-              - $ref: '#/components/schemas/ScanScopeItemCIDR'
+              - $ref: '#/components/schemas/ScanScopeItemIPRange'
               - $ref: '#/components/schemas/ScanScopeItemTag'
           
     Schedule:
