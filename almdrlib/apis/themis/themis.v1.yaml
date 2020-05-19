@@ -6,7 +6,10 @@ info:
     Alert Logic MDR External Permissions Management Service
 servers:
   - url: 'https://api.cloudinsight.alertlogic.com'
-    description: production
+    description: us-production
+    x-alertlogic-session-endpoint: true
+  - url: 'https://api.cloudinsight.alertlogic.co.uk'
+    description: uk-production
     x-alertlogic-session-endpoint: true
   - url: 'https://api.cloudinsight.product.dev.alertlogic.com'
     description: integration
