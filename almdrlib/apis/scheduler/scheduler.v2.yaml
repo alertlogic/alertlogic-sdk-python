@@ -329,13 +329,13 @@ components:
           type: string
           format: time
           description: |- 
-            Time of day when recurring scanning window commences (24h format)
+            Time of day when recurring scanning window commences (24h format, `HH:MM`)
           example: "17:00"
         end_time:
           type: string
           format: time
           description: |- 
-            Time of day when recurring scanning window ends (24h format)
+            Time of day when recurring scanning window ends (24h format, `HH:MM`)
           example: "05:00"
         days_of_week:
           type: array
@@ -434,7 +434,7 @@ components:
           format: time
           example: "18:00"
           description: |- 
-            Time of day when continuous scanning window commences (24h format)
+            Time of day when continuous scanning window commences (24h format, `HH:MM`)
         end_day:
           type: integer
           minimum: 1
@@ -448,7 +448,7 @@ components:
           format: time
           example: "07:00"
           description: |- 
-            Time of day when continuous scanning window ends (24h format)
+            Time of day when continuous scanning window ends (24h format, `HH:MM`)
           
     
     ScanWindowContinuousPeriodMonthly:
@@ -484,8 +484,9 @@ components:
         start_time:
           type: string
           format: time
-          example: "7:00"
-          description: Time of day when continuous scanning window commences (24h format)
+          example: "07:00"
+          description: |-
+            Time of day when continuous scanning window commences (24h format, `HH:MM`)
         end_day:
           type: integer
           minimum: 1
@@ -501,7 +502,8 @@ components:
           type: string
           format: time
           example: "10:00"
-          description: Time of day when continuous scanning window ends (24h)
+          description: |-
+            Time of day when continuous scanning window ends (24h format, `HH:MM`)
     
     ScanScopeItem:
       title: ScanScopeItem
