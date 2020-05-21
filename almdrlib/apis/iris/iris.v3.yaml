@@ -1,0 +1,341 @@
+openapi: 3.0.2
+info:
+  title: IRIS service
+  version: '3.0'
+  description: Incident service
+  contact:
+    email: support@alertlogic.com
+    name: Alert Logic support
+servers:
+  - url: 'https://api.cloudinsight.alertlogic.com'
+    description: production
+    x-alertlogic-session-endpoint: true
+  - url: 'https://api.product.dev.alertlogic.com'
+    description: integration
+    x-alertlogic-session-endpoint: true
+paths:
+  '/iris/v3/{account_id}/{incident_id}':
+    get:
+      summary: Get incident
+      tags:
+        - Incident operations
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Incident'
+              examples: {}
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+      operationId: get_incident
+      description: Get incident
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X GET "https://api.cloudinsight.alerlogic.com/iris/v3/12345678/e12345678"
+      parameters:
+        - schema:
+            type: string
+          name: account_id
+          in: path
+          required: true
+          description: AIMS Account ID
+        - schema:
+            type: string
+          name: incident_id
+          in: path
+          required: true
+          description: Incident ID
+        - schema:
+            type: string
+          name: return_value
+          in: query
+          description: Comma delimted list of dot-notation string names of desired properties in the result set. Use if you want a subset of attributes from the incident
+  '/iris/v3/{account_id}/friendly/{friendly_id}':
+    get:
+      summary: Get incident ID by friendly ID
+      tags:
+        - Incident operations
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FriendlyResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+      operationId: get_incident_id_by_friendly
+      description: Get incident ID by friendly ID
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X GET "https://api.cloudinsight.alerlogic.com/iris/v3/12345678/friendly/k9abcd"
+      parameters:
+        - schema:
+            type: string
+          name: account_id
+          in: path
+          required: true
+          description: AIMS Account ID
+        - schema:
+            type: string
+          name: friendly_id
+          in: path
+          required: true
+          description: Human friendly ID
+  '/iris/v3/{account_id}/{incident_id}/elaborations/associated':
+    get:
+      summary: Get associated logs/events for incident
+      tags:
+        - Incident operations
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssociatedElaborations'
+        '401':
+          description: Unauthorized
+        '400':
+          description: Bad request
+        '404':
+          description: Not found
+      operationId: get_associated_elaborations
+      description: Get associated logs/events for incident
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X GET "https://api.cloudinsight.alerlogic.com/iris/v3/12345678/e12345678/elaborations/associated"
+      parameters:
+        - schema:
+            type: string
+          name: account_id
+          in: path
+          required: true
+          description: AIMS Account ID
+        - schema:
+            type: string
+          name: incident_id
+          in: path
+          required: true
+          description: Incident ID 
+        - schema:
+            type: string
+          name: returnSource
+          in: query
+          description: To filter by source type. Allowed values - log, event
+        - schema:
+            type: string
+          name: return_value
+          in: query
+          description: Comma delimted list of 'dot-notation' string names of desired properties in the result set. Use if you want only a subset of attributes from results   
+  '/iris/v3/{account_id}/incidents_by_time':
+    'get':
+      summary: Get incidents in a timespan for account
+      tags:
+        - Incident operations
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentsByTime'
+        '400':
+          description: Bad request
+        '401':
+          description: Not authorized
+        '403':
+          description: Forbidden
+      operationId: incidents_by_time
+      description: Get incidents in a timespan for an account
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -X GET "https://api.cloudinsight.alerlogic.com/iris/v3/12345678/incidents_by_time?start_time=1577836800&end_time=1577923200"
+      parameters:
+        - schema:
+            type: string
+          name: account_id
+          in: path
+          required: true
+          description: AIMS Account ID
+        - schema:
+            type: string
+          name: start_time
+          in: query
+          required: true
+          description: Time to begin span, either epoch timestamp or an ISO string
+        - schema:
+            type: string
+          name: end_time
+          in: query
+          required: true
+          description: Time to end span, either epoch timestamp or an ISO string
+        - schema:
+            type: string
+          name: return_value
+          in: query
+          description: Comma delimited list of dot-notation string names of desired properties in the result set. Use if you only want a subset of attributes from each incident
+components:
+  schemas:
+    Incident:
+      title: Incident
+      type: object
+      description: IRIS incident
+      x-examples:
+        Incident Example: null
+      properties:
+        accountId:
+          type: string
+          description: AIMS Account Id
+        all_assets:
+          type: array
+          items:
+            type: object
+        assets:
+          type: object
+          properties:
+            __asset:
+              type: object
+            __source:
+              type: string
+            al__deployment:
+              type: string
+        createTime:
+          type: number
+          description: Incident creation time
+        createtime_str:
+          type: string
+          description: Incident creation time in ISO format
+        customer:
+          type: string
+          description: Customer name
+        customer_status:
+          type: object
+          properties:
+            status:
+              type: string
+            status_change_time:
+              type: string
+        desc:
+          type: string
+        humanFriendlyId:
+          type: string
+        incident:
+          type: object
+          properties:
+            description:
+              type: string
+            summary:
+              type: string
+            threatRating:
+              type: string
+        incidentId:
+          type: string
+          description: Incident ID
+        incident_attack_class:
+          type: string
+        incident_class:
+          type: string
+        incident_type:
+          type: string
+        snooze_status:
+          type: object
+          properties:
+            period_ms:
+              type: number
+            reason_code:
+              type: string
+            snoozed:
+              type: boolean
+        summary:
+          type: string
+        updateTime:
+          type: number
+        updatetime_str:
+          type: string
+      required:
+        - accountId
+        - incidentId
+        - incident
+        - humanFriendlyId
+        - desc
+        - customer_status
+        - createTime
+        - createtime_str
+        - updateTime
+        - updatetime_str
+        - customer
+    IncidentKey:
+      title: IncidentKey
+      type: object
+      description: Incident key object
+      properties:
+        incidentId:
+          type: string
+        humanFriendlyId:
+          type: string
+        accountId:
+          type: string
+    FriendlyResponse:
+      title: FriendlyResponse
+      type: array
+      items:
+        $ref: '#/components/schemas/IncidentKey'
+      description: FriendlyResponse list
+      x-examples:
+        FriendlyResponse Example: null
+      required:
+        - response
+    AssociatedElaborations:
+      title: AssociatedElaborations
+      type: object
+      description: AssociatedElaborations object
+      x-examples:
+        AssociatedElaborations Example: null
+      properties:
+        filter:
+          type: object
+        returnVals:
+          type: array
+          items:
+            type: object
+            description: Values returned by the query
+        stats:
+          type: object
+    IncidentsByTime:
+      title: IncidentsByTime
+      type: array
+      items: 
+        $ref: '#/components/schemas/Incident'
+      description: IncidentsByTime list
+  securitySchemes:
+    X-AIMS-Auth-Token:
+      name: X-AIMS-Auth-Token
+      type: apiKey
+      in: header
+      description: AIMS Authentication Token
+tags:
+  - name: Incident operations
+    description: IRIS incident operations
