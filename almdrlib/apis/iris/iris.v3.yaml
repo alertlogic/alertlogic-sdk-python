@@ -26,7 +26,64 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Incident'
-              examples: {}
+              examples: 
+                Get Incident response example:
+                  value:
+                    accountId: number
+                    all_assets:
+                      - object
+                    asset_deployment_type: string
+                    asset_host_name: string
+                    asset_native_account_id: string
+                    assets:
+                      __asset: object
+                      __contentType: string
+                      __messageId: string
+                      __normalizedTime: string
+                      __relatedOrAssociated: string
+                      __source: string
+                      __uuid: string
+                      al__deployment: string
+                      al__subnet: string
+                      al__vpc: string
+                    attacker:
+                      ip: string
+                    attacker_lset:
+                      - object
+                    createTime: number
+                    createtimeStr: string
+                    customer: string
+                    customer_status:
+                      status: string
+                      status_change_time: string
+                    defaultThreatRating: string
+                    has_assets: boolean
+                    humanFriendlyId: string
+                    incident:
+                      attackClassId: number
+                      attackClassId_str: string
+                      subType: string
+                      summary: string
+                      threatRating: string
+                      type: string
+                    incidentId: string
+                    incident_attack_class: string
+                    incident_escalated: string
+                    incident_sub_type: string
+                    iris_incident_version: number
+                    iris_notifications: boolean
+                    snooze_status:
+                      period_ms: number
+                      reason_code: string
+                      snoozed: boolean
+                    sources:
+                      - string
+                    updateTime: number
+                    updatetime_str: string
+                    victim:
+                      ip: string
+                    victim_lset:
+                      - object
         '401':
           description: Unauthorized
         '403':
@@ -71,6 +128,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/FriendlyResponse'
+              examples:
+                Friendly response example:
+                  value:
+                    - {
+                      accountId: number,
+                      humanFriendlyId: string,
+                      incidentId: string
+                    }
         '401':
           description: Unauthorized
         '403':
@@ -110,6 +175,52 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AssociatedElaborations'
+              examples:
+                Get asspcoated logs/events response example:
+                  value:
+                    filter:
+                      eq:
+                        property: string
+                        value: string
+                    returnVals:
+                      - __appliance_name: string
+                        __content_type: string
+                        __datacenter: string
+                        __hostUUID: string
+                        __host_id: string
+                        __host_name: string
+                        __irisType: string
+                        __messageId: string
+                        __normalizedTime: string
+                        __relatedOrAssociated: string
+                        __source: string
+                        __sourceName: string
+                        __sourceType: string
+                        __source_host_ip: string
+                        __uuid: string
+                        facility: string
+                        header: string
+                        host_name: string
+                        id: object
+                        ingest_id: string
+                        ingest_ts: number
+                        message: string
+                        metadata: object
+                        priority: number
+                        source_id: string
+                        time_recv: number
+                    stats:
+                      matchCounts: array
+                      numItemsInDataSource: number
+                      numberOfMatchingElaborations: number
+                      queryExecutionTime:
+                        Aggregation: string
+                        Filter: string
+                        Hydration: string
+                        Match Counts: string
+                        Results: string
+                        TimeSlice: string
+                        Total Query: string
         '401':
           description: Unauthorized
         '400':
@@ -159,6 +270,64 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/IncidentsByTime'
+              examples:
+                Incidents by time response example:
+                  value:
+                    - accountId: number
+                      all_assets:
+                        - object
+                      asset_deployment_type: string
+                      asset_host_name: string
+                      asset_native_account_id: string
+                      assets:
+                        __asset: object
+                        __contentType: string
+                        __messageId: string
+                        __normalizedTime: string
+                        __relatedOrAssociated: string
+                        __source: string
+                        __uuid: string
+                        al__deployment: string
+                        al__subnet: string
+                        al__vpc: string
+                      attacker:
+                        ip: string
+                      attacker_lset:
+                        - object
+                      createTime: number
+                      createtimeStr: string
+                      customer: string
+                      customer_status:
+                        status: string
+                        status_change_time: string
+                      defaultThreatRating: string
+                      has_assets: boolean
+                      humanFriendlyId: string
+                      incident:
+                        attackClassId: number
+                        attackClassId_str: string
+                        subType: string
+                        summary: string
+                        threatRating: string
+                        type: string
+                      incidentId: string
+                      incident_attack_class: string
+                      incident_escalated: string
+                      incident_sub_type: string
+                      iris_incident_version: number
+                      iris_notifications: boolean
+                      snooze_status:
+                        period_ms: number
+                        reason_code: string
+                        snoozed: boolean
+                      sources:
+                        - string
+                      updateTime: number
+                      updatetime_str: string
+                      victim:
+                        ip: string
+                      victim_lset:
+                        - object
         '400':
           description: Bad request
         '401':
