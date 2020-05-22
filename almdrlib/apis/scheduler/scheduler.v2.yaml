@@ -536,7 +536,7 @@ components:
               type: string
               description: |-
                 Specifies the type of the asset added to the scan scope.
-
+                
                 Following asset types are supported:
                 - `deployment`
                 - `region`
@@ -559,7 +559,8 @@ components:
               type: string
               enum:
                 - asset
-
+            
+              
     ScanScopeItemCIDR:
       allOf:
         - $ref: '#/components/schemas/ScanScopeItem'
@@ -632,6 +633,19 @@ components:
               - $ref: '#/components/schemas/ScanScopeItemCIDR'
               - $ref: '#/components/schemas/ScanScopeItemIPRange'
               - $ref: '#/components/schemas/ScanScopeItemTag'
+
+    AuditObject:
+      title: AuditObject
+      description: Describes who and when modified the parent object.
+      type: object
+      readOnly: true
+      properties:
+        at:
+          type: string
+          format: date-time
+        by:
+          type: string
+          example: 9803dfd4-efbe-42f7-a2a0-ec43b67e871e
           
     Schedule:
       title: ScanSchedule
@@ -701,14 +715,14 @@ components:
         scan_windows:
           description: |-
             Specifies the time periods when the Scan Schedule should be active.
-
+            
             In case when there are no restrictions to the scanning periods and Scan Schedule
-            should be considered as "automatic", `scan_windows` list should be either an
+            should be considered as "automatic", `scan_windows` list should be either an 
             empty list or `null`. In such case each target in the schedule's scope will be
             scanned once within the selected SLA period, that is specified by
             `scan_frequency` parameter, without date and time restrictions other than
             availability of appliances within the deployment.
-
+            
             Please note there are four types of `scan_windows`, defined as following
             models:
             - `ScanWindowSelectedDaysOfWeek`
@@ -733,6 +747,14 @@ components:
             parameter.
           allOf:
             - $ref: '#/components/schemas/ScanScope'
+        created:
+          allOf:
+            - $ref: '#/components/schemas/AuditObject'
+          nullable: true
+        modified:
+          allOf:
+            - $ref: '#/components/schemas/AuditObject'
+          nullable: true
 
   securitySchemes:
     X-AIMS-Auth-Token:
@@ -740,4 +762,3 @@ components:
       type: apiKey
       in: header
       description: AIMS Authentication Token
-
