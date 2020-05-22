@@ -1,7 +1,9 @@
-__version__ = '1.0.23'
+__version__ = '1.0.24'
 __author__ = 'Alert Logic, Inc.'
 
 import logging
+import almdrlib.constants
+from almdrlib.config import Config
 from almdrlib.session import Session
 
 IWS_DEFAULT_SESSION = None
@@ -49,6 +51,17 @@ def client(service_name, version=None, session=None, *args, **kwargs):
     if session is None:
         session = _get_default_session()
     return session.client(service_name, version, *args, **kwargs)
+
+def configure(
+        profile=almdrlib.constants.DEFAULT_PROFILE,
+        access_key_id=None, secret_key=None,
+        global_endpoint=almdrlib.constants.DEFAULT_GLOBAL_ENDPOINT,
+        residency=almdrlib.constants.DEFAULT_RESIDENCY):
+    return Config.configure(
+            profile=profile,
+            access_key_id=access_key_id, secret_key=secret_key,
+            global_endpoint=global_endpoint, residency=residency)
+
 
 
 # Logging to dev/null

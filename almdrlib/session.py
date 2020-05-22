@@ -235,11 +235,12 @@ class Session():
 
     def get_url(self, service_name, account_id=None):
         try:
-            response = self._session.get(
+            response = self.request(
+                'get',
                 Region.get_endpoint_url(self._global_endpoint_url,
                                         service_name,
                                         account_id or self.account_id,
-                                        self.residency)
+                                        self.residency),
             )
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
