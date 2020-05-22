@@ -136,6 +136,54 @@ class Config():
     def get_auth(self):
         return self._access_key_id, self._secret_key
 
+    @staticmethod
+    def configure(
+            profile=almdrlib.constants.DEFAULT_PROFILE,
+            account_id=None,
+            access_key_id=None, secret_key=None,
+            global_endpoint=None,
+            residency=None):
+
+        if not access_key_id:
+            raise AlmdrlibValueError("Missing access_key_id")
+
+        if not secret_key:
+            raise AlmdrlibValueError("Missing secret_key")
+
+        parser = _get_config_parser(almdrlib.constants.DEFAULT_CONFIG_FILE)
+
+        try:
+            parser.add_section(profile)
+        except configparser.DuplicateSectionError as e:
+            # section alread exists.
+            pass
+        except configparser.ValueError as e:
+            # almdrlib.constants.DEFAULT_PROFILE was passed as the section name
+            pass
+
+        parser.set(profile, 'access_key_id', access_key_id)
+        parser.set(profile, 'secret_key', secret_key)
+        if account_id:
+            parser.set(profile, 'account_id', account_id)
+        if global_endpoint:
+            parser.set(profile, 'global_endpoint', global_endpoint)
+
+        if residency:
+            parser.set(profile, 'residency', residency)
+
+        with open(almdrlib.constants.DEFAULT_CONFIG_FILE, 'w') as configfile:
+            parser.write(configfile)
+
+    @staticmethod
+    def set_option(
+            name,
+            value,
+            profile=almdrlib.constants.DEFAULT_PROFILE):
+        parser = _get_config_parser(almdrlib.constants.DEFAULT_CONFIG_FILE)
+        parser.set(profile, name, value)
+        with open(almdrlib.constants.DEFAULT_CONFIG_FILE, 'w') as configfile:
+            parser.write(configfile)
+
     @property
     def profile(self):
         return self._profile
@@ -156,3 +204,17 @@ class Config():
     def get_api_dir():
         api_dir = os.environ.get('ALERTLOGIC_API')
         return api_dir and f"{api_dir}" or f"{os.path.dirname(__file__)}/apis"
+
+
+def _get_config_parser(config_file=almdrlib.constants.DEFAULT_CONFIG_FILE):
+    parser = configparser.ConfigParser()
+    try:
+        read_ok = parser.read(config_file)
+        if config_file not in read_ok:
+            raise AlmdrlibValueError(
+                f"'{config_file}' doesn't exist")
+
+    except configparser.MissingSectionHeaderError:
+        raise ConfigException(
+                f"Invalid format in file {config_file}")
+    return parser
