@@ -1,0 +1,427 @@
+openapi: 3.0.2
+info:
+  title: aerta
+  version: '1.0'
+  description: A service to manage RTA content and models
+servers:
+  - url: 'https://api.global-services.global.alertlogic.com'
+    description: production
+    x-alertlogic-session-endpoint: true
+  - url: 'https://api.global-integration.product.dev.alertlogic.com'
+    description: integration
+    x-alertlogic-session-endpoint: true
+paths:
+  '/aerta/v1/{account_id}/fetch/{data_type}/paths/{path}':
+    get:
+      summary: Get RTA data by RTA path
+      responses:
+        '200':
+          description: OK
+      operationId: get_data_by_path
+      description: 'Fetch RTA model values using its path. Values are returned for an entire interval, even if boundaries (:start_ts and :end_ts) include part of them. In the case where multiple revisions of the RTA exists during the specified interval, separate entries are returned for each of them.'
+      security:
+        - X-AIMS-Auth-Token: []
+      parameters:
+        - schema:
+            type: integer
+            format: int32
+            exclusiveMinimum: true
+          in: query
+          name: start_ts
+          description: RTA start timestamp
+          required: true
+        - schema:
+            type: integer
+            format: int32
+            exclusiveMinimum: true
+          in: query
+          name: end_ts
+          description: RTA end timestamp
+          required: true
+        - schema:
+            type: integer
+            format: int32
+            exclusiveMinimum: true
+          in: query
+          name: limit
+          description: Number of records/slices to return.
+        - schema:
+            type: string
+          in: query
+          name: continuation
+          description: Continuation string returned by a previous  `get_data_by_path` call
+        - schema:
+            type: string
+            enum:
+              - time
+          in: query
+          name: reaggregation
+          description: 'Special purpose re-aggregations. Currently only support time: re-aggregate all results in a single time interval interval'
+      tags:
+        - RTA Get Data
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expression:
+                  type: string
+                  description: |-
+                    Fetch RTA model values and re-aggregate them according to the provided expression.
+                    Values are returned for an entire interval expression, even if boundaries (:start_ts and :end_ts) include part of them. In the case where multiple revisions of the RTA exists during the specified interval, separate entries are returned for each of them.
+
+                    What does re-aggregation allow?
+
+                    Time intervals can be enlarged to an integer multiple of the original expression time interval (SELECT INTERVAL(ts, 300) as i ... GROUP BY i -> SELECT INTERVAL(ts, 900) as i ... GROUP BY i)
+                    GROUP BY dimensions can be reduced (... GROUP BY a, b -> ... GROUP BY a)
+                    Projections can be omitted (SELECT a, b, c ... -> SELECT a, c)
+                    Aggregations can be altered (SELECT AVG(a) ... -> SELECT MAX(a))
+                    Note: alterations can only reduce an aggregation complexity: a larger [l]set is more complex than a smaller [l]sets, a larger [l]ucounts is more complex than smaller [l]ucounts, an [l]set is more complex than an [l]ucount, and an [l]ucount is more complex than a min, a max, a sum, an avg, or a count.
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+        name: data_type
+        in: path
+        required: true
+        description: Ingest Data type. Refer Ingest Service API for a list of available data types.
+      - schema:
+          type: string
+        name: path
+        in: path
+        required: true
+  '/aerta/v1/{account_id}/rtas':
+    get:
+      summary: Get all RTA Model definitions for a specific account
+      tags:
+        - RTA Resources
+      responses:
+        '200':
+          description: OK
+      operationId: get_rtas
+      description: Gets all configured RTA Model definitions for a specific account
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+    post:
+      summary: Create RTA Model for a specific account
+      operationId: create_rta
+      responses:
+        '201':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rta_id:
+                    type: string
+                    description: ID of newly create RTA Model
+      description: Creates RTA Model for a specific account
+      security:
+        - X-AIMS-Auth-Token: []
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: path
+          description: RTA Model path
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expression:
+                  type: string
+                  description: Expression SQL-like string or object
+                customers:
+                  type: array
+                  description: "\t\nList of customers (String) to apply filter to. [\"*\"] for all customers."
+                  items:
+                    type: string
+              required:
+                - expression
+                - customers
+      tags:
+        - RTA Resources
+    delete:
+      summary: Delete RTA Model for a specific customer
+      operationId: delete_rta
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: string
+                    description: Deleted RTA Model ID
+      description: Deletes RTA Model for a specific customer
+      security:
+        - X-AIMS-Auth-Token: []
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: path
+          required: true
+          description: RTA Model Path
+      tags:
+        - RTA Resources
+  /aerta/v1/rtas:
+    get:
+      summary: Get all RTAs
+      tags:
+        - RTA Resources
+      responses:
+        '200':
+          description: OK
+      operationId: get_global_rtas
+      description: Get configured RTAs definitions defined for all customers
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters: []
+    post:
+      summary: Create Global RTA Model
+      operationId: create_global_rta
+      responses:
+        '201':
+          description: RTA Model Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rta_id:
+                    type: string
+                    description: ID of the created RTA Model
+      security:
+        - X-AIMS-Auth-Token: []
+      description: Creates Global RTA Model
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: path
+          required: true
+          description: RTA Model path. Must be unique.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expression:
+                  type: string
+                  description: Expression SQL-like string or object
+                customers:
+                  type: array
+                  description: 'List of customers (String) to apply filter to. Specify ["*"] for all customers.'
+                  items:
+                    type: string
+      tags:
+        - RTA Resources
+    delete:
+      summary: Delete Global RTA Model
+      operationId: delete_global_rta
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: string
+                    description: ID of the deleted RTA Model
+      description: Deletes Global RTA Model
+      security:
+        - X-AIMS-Auth-Token: []
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: path
+          description: RTA Model Path
+          required: true
+      tags:
+        - RTA Resources
+  '/aerta/v1/rtas/datatypes/{data_type}':
+    get:
+      summary: Get all RTAs for a specific data type
+      tags:
+        - RTA Resources
+      responses:
+        '200':
+          description: OK
+      operationId: get_global_rtas_by_data_type
+      description: Get configured RTAs definitions defined for all customers for spefic data type
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: data_type
+        in: path
+        required: true
+  '/aerta/v1/rtas/paths/{path}':
+    get:
+      summary: Get global RTA for a specific path
+      tags:
+        - RTA Resources
+      responses:
+        '200':
+          description: OK
+      operationId: get_global_rta_by_path
+      description: Get configured RTA definition defined for all customers for by path
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: path
+        in: path
+        required: true
+  '/aerta/v1/rtas/ids/{id}':
+    get:
+      summary: Get global RTA for a specific path
+      tags:
+        - RTA Resources
+      responses:
+        '200':
+          description: OK
+      operationId: get_global_rta_by_id
+      description: Get configured RTA definition defined for all customers for id
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: id
+        in: path
+        required: true
+  '/aerta/v1/{account_id}/fetch/{data_type}/{id}':
+    get:
+      summary: Get RTA Data by RTA ID
+      tags:
+        - RTA Get Data
+      responses:
+        '200':
+          description: OK
+      operationId: get_data_by_id
+      description: 'Fetch RTA model values using RTA ID. Values are returned for an entire interval, even if boundaries (:start_ts and :end_ts) include part of them.'
+      security:
+        - X-AIMS-Auth-Token: []
+      parameters:
+        - schema:
+            type: integer
+            format: int32
+            exclusiveMinimum: true
+          in: query
+          name: start_ts
+          description: RTA start timestamp
+          required: true
+        - schema:
+            type: integer
+            format: int32
+            exclusiveMinimum: true
+          in: query
+          name: end_ts
+          description: RTA end timestamp
+          required: true
+        - schema:
+            type: string
+            enum:
+              - plain
+              - new_line
+          in: query
+          name: out_format
+          description: Specify output format. Plain Json by default
+        - schema:
+            type: string
+            enum:
+              - time
+          in: query
+          name: reaggregation
+          description: 'Special purpose re-aggregations. Currently only support time: re-aggregate all results in a single time interval interval'
+        - schema:
+            type: string
+          in: query
+          name: exclusive_field
+          description: Opaque; provided in telemetry/observations
+        - schema:
+            type: string
+          in: query
+          name: group_by
+          description: Opaque; provided in telemetry/observations
+        - schema:
+            type: string
+          in: query
+          name: group_by_md5
+          description: Opaque; provided in telemetry/observations
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+        name: data_type
+        in: path
+        required: true
+      - schema:
+          type: string
+        name: id
+        in: path
+        required: true
+  '/aerta/v1/rtas/ids/{id}/expiration':
+    get:
+      summary: "Get an RTA Model's expiration timestamp"
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Experation Timestamp
+      operationId: get_global_rta_experiation
+      description: "Return an rta's expiration timestamp"
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: id
+        in: path
+        required: true
+        description: RTA Model ID
+components:
+  schemas: {}
+  securitySchemes:
+    X-AIMS-Auth-Token:
+      name: X-AIMS-Auth-Token
+      type: apiKey
+      in: header
+      description: AIMS Authentication Token
+
