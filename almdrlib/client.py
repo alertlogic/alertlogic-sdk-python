@@ -139,7 +139,7 @@ class OperationResponse(object):
 
     def __init__(self, schema, session=None):
         for r_code, r_schema in schema.items():
-            if rcode and r_code[0] == '2':
+            if r_code and r_code[0] == '2':
                 self._add_response(r_schema.pop(OpenAPIKeyWord.CONTENT, None))
 
         self._schema = schema
