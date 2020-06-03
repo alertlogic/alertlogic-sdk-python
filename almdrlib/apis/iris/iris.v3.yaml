@@ -26,7 +26,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Incident'
-              examples: 
+              examples:
                 Get Incident response example:
                   value:
                     accountId: number
@@ -131,11 +131,9 @@ paths:
               examples:
                 Friendly response example:
                   value:
-                    - {
-                      accountId: number,
-                      humanFriendlyId: string,
+                    - accountId: number
+                      humanFriendlyId: string
                       incidentId: string
-                    }
         '401':
           description: Unauthorized
         '403':
@@ -221,10 +219,10 @@ paths:
                         Results: string
                         TimeSlice: string
                         Total Query: string
-        '401':
-          description: Unauthorized
         '400':
           description: Bad request
+        '401':
+          description: Unauthorized
         '404':
           description: Not found
       operationId: get_associated_elaborations
@@ -247,19 +245,19 @@ paths:
           name: incident_id
           in: path
           required: true
-          description: Incident ID 
+          description: Incident ID
         - schema:
             type: string
           name: returnSource
           in: query
-          description: To filter by source type. Allowed values - log, event
+          description: 'To filter by source type. Allowed values - log, event'
         - schema:
             type: string
           name: return_value
           in: query
-          description: Comma delimted list of 'dot-notation' string names of desired properties in the result set. Use if you want only a subset of attributes from results   
+          description: "Comma delimted list of 'dot-notation' string names of desired properties in the result set. Use if you want only a subset of attributes from results"
   '/iris/v3/{account_id}/incidents_by_time':
-    'get':
+    get:
       summary: Get incidents in a timespan for account
       tags:
         - Incident operations
@@ -354,18 +352,178 @@ paths:
           name: start_time
           in: query
           required: true
-          description: Time to begin span, either epoch timestamp or an ISO string
+          description: 'Time to begin span, either epoch timestamp or an ISO string'
         - schema:
             type: string
           name: end_time
           in: query
           required: true
-          description: Time to end span, either epoch timestamp or an ISO string
+          description: 'Time to end span, either epoch timestamp or an ISO string'
         - schema:
             type: string
           name: return_value
           in: query
           description: Comma delimited list of dot-notation string names of desired properties in the result set. Use if you only want a subset of attributes from each incident
+  '/iris/v3/{account_id}/{incident_id}/complete':
+    post:
+      summary: Complete incident notes and close Incident
+      operationId: complete_incident
+      responses:
+        '200':
+          description: Incident Update Record
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  new:
+                    type: object
+                    description: Incident state after completing the incident.
+                    properties:
+                      notes:
+                        type: string
+                        description: Incident completion notes
+                      reason_code:
+                        type: string
+                        description: Reason code for completing the incident
+                        enum:
+                          - further_action
+                          - acceptable_risk
+                          - compensating_control
+                          - threat_not_valid
+                          - other
+                      status:
+                        type: string
+                        enum:
+                          - completed
+                        description: Incident status after completing the incident.
+                      status_change_time:
+                        type: string
+                        format: date-time
+                        description: Datetime when the incident was completed
+                  old:
+                    type: object
+                    description: Previous incident state
+                    properties:
+                      status:
+                        type: string
+                      status_change_time:
+                        type: string
+                        format: date-time
+      description: Closes an incident and completes it with final notes.
+      security:
+        - X-AIMS-Auth-Token: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason_code:
+                  type: string
+                  enum:
+                    - further_action
+                    - acceptable_risk
+                    - compensating_control
+                    - threat_not_valid
+                    - auto_closed
+                    - other
+                  description: Reason for completing the incident
+                notes:
+                  type: string
+                  description: Notes decribing the reason for completing the incident
+              required:
+                - reason_code
+                - notes
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+        name: incident_id
+        in: path
+        required: true
+        description: Incident ID
+  '/iris/v3/{account_id}/{incident_id}/feedback':
+    post:
+      summary: Provide Incident Feedback
+      operationId: feedback
+      responses:
+        '200':
+          description: OK
+        '':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  feedback:
+                    type: string
+                    description: Feedback information
+                  feedback_datetime:
+                    type: string
+                    description: Datetime of the feedback
+                    format: date-time
+                  feedback_reason:
+                    type: string
+                    description: Reason for feedback
+                    enum:
+                      - further_action
+                      - acceptable_risk
+                      - compensating_control
+                      - threat_not_valid
+                      - not_concluded
+                      - other
+                  feedback_uid:
+                    type: string
+                    format: uuid
+                    description: Unique identifier of the feedback
+                  feedback_user:
+                    type: string
+                    description: User created the feedback
+          description: Created feedback information
+      security:
+        - X-AIMS-Auth-Token: []
+      description: Add a feedback to an incident
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_feedback:
+                  type: string
+                  description: Customer Feedback
+                customer_feedback_reason:
+                  type: string
+                  description: Reason for feedback
+                  enum:
+                    - further_action
+                    - acceptable_risk
+                    - compensating_control
+                    - threat_not_valid
+                    - not_concluded
+                    - other
+              required:
+                - customer_feedback
+                - customer_feedback_reason
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+        name: incident_id
+        in: path
+        required: true
+        description: Incident ID
 components:
   schemas:
     Incident:
@@ -496,7 +654,7 @@ components:
     IncidentsByTime:
       title: IncidentsByTime
       type: array
-      items: 
+      items:
         $ref: '#/components/schemas/Incident'
       description: IncidentsByTime list
   securitySchemes:
@@ -508,3 +666,4 @@ components:
 tags:
   - name: Incident operations
     description: IRIS incident operations
+

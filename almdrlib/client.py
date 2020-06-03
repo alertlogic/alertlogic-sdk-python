@@ -297,7 +297,7 @@ class RequestBodyObjectParameter(RequestBodyParameter):
         if self._explode:
             kwargs['data'] = json.dumps(result.pop(self.name))
         else:
-            kwargs['data'] = json.dumps({self.name: result})
+            kwargs['data'] = json.dumps(result)
 
     @property
     def schema(self):
