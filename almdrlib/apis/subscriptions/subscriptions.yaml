@@ -1,0 +1,445 @@
+openapi: 3.0.2
+info:
+  title: Subscriptions Service
+  version: 1.0.0
+  description: 'Global Usage, Entitlements, and Subscription Service'
+  contact:
+    name: Alert Logic Support
+    email: support@alertlogic.com
+  x-alertlogic-iws-service:
+    type: public
+servers:
+  - url: 'https://api.global-integration.product.dev.alertlogic.com'
+    description: Integration
+    x-alertlogic-session-endpoint: true
+  - url: 'https://api.global-services.global.alertlogic.com'
+    description: Production
+    x-alertlogic-session-endpoint: true
+paths:
+  '/subscriptions/v1/{account_id}/entitlements':
+    get:
+      summary: Get Entitlements
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  account_id:
+                    type: string
+                    description: AIMS Account
+                  entitlements:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Entitlement'
+                  legacy_features:
+                    type: array
+                    description: "List of Defender's legacy features for the account"
+                    items:
+                      type: string
+              examples:
+                Get Entitlements Response Example:
+                  value:
+                    account_id: '01000001'
+                    entitlements:
+                      - id: 9F495C02-19FC-4F2A-8346-80752502AA31
+                        subscription_id: 904D2E06-157E-4EDC-A38B-C52D75F95BAF
+                        product_family: log_manager
+                        status: active
+                        end_date: 1498867200
+                        created:
+                          at: 1547731629
+                          by: CB3D4506-5595-47A6-8851-DF55D2525743
+                        updated:
+                          at: 1547731629
+                          by: CB3D4506-5595-47A6-8851-DF55D2525743
+                      - id: 900E28E2-125D-4128-8372-6FEE217DE4FC
+                        subscription_id: 904D2E06-157E-4EDC-A38B-C52D75F95BAF
+                        product_family: log_data_retention
+                        status: active
+                        value: 12
+                        value_type: months
+                        usage_based: false
+                        end_date: 1523440800
+                      - id: CB1345F3-50B9-4637-9D37-11FAE0893CD4
+                        subscription_id: AAB2A94F-2A2F-474E-BEFD-C387E595F153
+                        product_family: threat_manager
+                        status: active
+                        usage_based: false
+                        end_date: 1523440800
+                      - id: CB1345F3-50B9-4637-9D37-11FAE0893CD4
+                        subscription_id: AAB2A94F-2A2F-474E-BEFD-C387E595F153
+                        product_family: ids_data_retention
+                        status: active
+                        value: 12
+                        value_type: months
+                        usage_based: false
+                        end_date: 1523440800
+                        created:
+                          at: 1547731629
+                          by: CB3D4506-5595-47A6-8851-DF55D2525743
+                        updated:
+                          at: 1547731629
+                          by: CB3D4506-5595-47A6-8851-DF55D2525743
+                    legacy_features:
+                      - azure_enabled
+                      - customer_facing_incidents
+                      - pci_scan
+                Empty Response Example:
+                  value:
+                    account_id: '01000001'
+                    entitlements: []
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      operationId: get_entitlements
+      description: Return entitlements for the customer
+      parameters:
+        - schema:
+            type: string
+            enum:
+              - assess
+              - detect
+              - respond
+              - cloud_insight
+              - threat_manager
+              - log_manager
+              - active_watch_premier
+              - web_security_managed
+              - cloud_defender
+              - ids_data_retention
+              - log_data_retention
+              - log_review
+          in: query
+          name: product_family
+          description: Filter the entitlements base on the product_family
+        - schema:
+            type: string
+          in: query
+          name: status
+          description: Filter the entitlements base on the status
+        - schema:
+            type: string
+            default: 'false'
+            enum:
+              - 'true'
+              - 'false'
+          in: query
+          name: filter_bundles
+          description: Filter the entitlements base on the status
+      security:
+        - X-AIMS-Auth-Token: []
+      tags:
+        - Entitlement Resources
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+  '/subscriptions/v1/account_ids/entitlement/{product_family}':
+    get:
+      summary: List Account Ids with a provided entitlement
+      tags:
+        - Entitlement Resources
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  account_ids:
+                    type: array
+                    items:
+                      type: string
+              examples:
+                List Accoutns Ids Response Exanple:
+                  value:
+                    account_ids:
+                      - '134242957'
+                      - '134263835'
+                      - '134226023'
+                      - '134277451'
+                Empty Response Example:
+                  value:
+                    account_ids: []
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      operationId: get_list_of_accounts_ids
+      description: Returns a list of account ids entitled to a provided product family
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: subscription_type
+          description: Only check entitlements derived from a subscription with the provided type
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+          enum:
+            - assess
+            - detect
+            - respond
+            - cloud_insight
+            - threat_manager
+            - log_manager
+            - active_watch_premier
+            - web_security_managed
+            - cloud_defender
+            - ids_data_retention
+            - log_data_retention
+            - log_review
+        name: product_family
+        in: path
+        required: true
+        description: ''
+  '/subscriptions/v1/{account_id}/subscription/{subscription_id}':
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+      - schema:
+          type: string
+        name: subscription_id
+        in: path
+        required: true
+        description: ID of subscription
+    get:
+      summary: Get subscription
+      operationId: get_subscription
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+              examples:
+                Get Subscription Response Example:
+                  value:
+                    id: AAB2A94F-2A2F-474E-BEFD-C387E595F153
+                    account_id: '01000001'
+                    active: true
+                    type: standard
+                    created:
+                      at: 1547731629
+                      by: CB3D4506-5595-47A6-8851-DF55D2525743
+                    updated:
+                      at: 1547731629
+                      by: CB3D4506-5595-47A6-8851-DF55D2525743
+                    entitlements:
+                      - id: CB1345F3-50B9-4637-9D37-11FAE0893CD4
+                        subscription_id: AAB2A94F-2A2F-474E-BEFD-C387E595F153
+                        product_family: threat_manager
+                        status: active
+                        end_date: 1523440800
+                        created:
+                          at: 1547731629
+                          by: CB3D4506-5595-47A6-8851-DF55D2525743
+                        updated:
+                          at: 1547731629
+                          by: CB3D4506-5595-47A6-8851-DF55D2525743
+                      - id: CB1345F3-50B9-4637-9D37-11FAE0893CD4
+                        subscription_id: AAB2A94F-2A2F-474E-BEFD-C387E595F153
+                        product_family: ids_data_retention
+                        status: active
+                        value: 12
+                        value_type: months
+                        end_date: 1523440800
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+      security:
+        - X-AIMS-Auth-Token: []
+      description: Return a subscription for the provided customer
+      tags:
+        - Subscription Resources
+  '/subscriptions/v1/{account_id}/subscriptions':
+    get:
+      summary: Get subscriptions
+      tags:
+        - Subscription Resources
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscriptions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Subscription'
+              examples:
+                Get Subscriptions Response Example:
+                  value:
+                    subscriptions:
+                      - id: 904D2E06-157E-4EDC-A38B-C52D75F95BAF
+                        account_id: '01000001'
+                        active: false
+                        type: standard
+                        created:
+                          at: 1547731629
+                          by: CB3D4506-5595-47A6-8851-DF55D2525743
+                        updated:
+                          at: 1547731629
+                          by: CB3D4506-5595-47A6-8851-DF55D2525743
+                      - id: AAB2A94F-2A2F-474E-BEFD-C387E595F153
+                        account_id: '01000001'
+                        active: true
+                        type: standard
+                        created:
+                          at: 1547731629
+                          by: CB3D4506-5595-47A6-8851-DF55D2525743
+                        updated:
+                          at: 1547731629
+                          by: CB3D4506-5595-47A6-8851-DF55D2525743
+                Empty Response Example:
+                  value:
+                    subscriptions: []
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      operationId: get_subscriptions
+      description: Return Subscriptions for the provided customer
+      security:
+        - X-AIMS-Auth-Token: []
+    parameters:
+      - schema:
+          type: string
+        name: account_id
+        in: path
+        required: true
+        description: AIMS Account ID
+components:
+  schemas:
+    Entitlement:
+      title: Entitlement
+      type: object
+      description: ''
+      x-examples:
+        Entitlement Example:
+          id: 9F495C02-19FC-4F2A-8346-80752502AA31
+          subscription_id: 904D2E06-157E-4EDC-A38B-C52D75F95BAF
+          product_family: log_manager
+          status: active
+          end_date: 1498867200
+          created:
+            at: 1547731629
+            by: CB3D4506-5595-47A6-8851-DF55D2525743
+          updated:
+            at: 1547731629
+            by: CB3D4506-5595-47A6-8851-DF55D2525743
+      properties:
+        product_family:
+          type: string
+          description: The product family of the entitlement
+        status:
+          type: string
+          description: The status of the entitlement
+          enum:
+            - active
+            - canceled
+        created:
+          type: object
+          description: Creation stamp
+          properties:
+            at:
+              type: number
+              description: When this object was created
+            by:
+              type: string
+              description: ID of the user who created this object
+        updated:
+          type: object
+          description: Modification stamp
+          properties:
+            at:
+              type: number
+              description: When the object was updated last
+            by:
+              type: string
+              description: ID of the user who updated this object
+        value:
+          type: number
+          description: Entitlement limit value
+        value_type:
+          type: string
+          description: Entitlement limit value type
+        usage_based:
+          type: boolean
+          description: An entitlement is usage-based
+        subscription_id:
+          type: string
+          description: Subscription identifier of the entitlement
+        end_date:
+          type: number
+    Subscription:
+      title: Subscription
+      type: object
+      properties:
+        id:
+          type: string
+          description: Id of the subscription
+        account_id:
+          type: string
+          description: Account ID of the subscription
+        billing_id:
+          type: string
+          description: Billing ID of the subscription
+        status:
+          type: string
+          description: status of the subscription
+        type:
+          type: string
+          description: type of subscription
+        created:
+          type: object
+          properties:
+            at:
+              type: number
+              description: When this object was created
+            by:
+              type: string
+              description: ID of the user who created this object
+        updated:
+          type: object
+          properties:
+            at:
+              description: When the object was updated last
+              type: number
+            by:
+              type: string
+              description: ID of the user who updated this object
+        entitlements:
+          type: array
+          items:
+            $ref: '#/components/schemas/Entitlement'
+  securitySchemes:
+    X-AIMS-Auth-Token:
+      name: X-AIMS-Auth-Token
+      type: apiKey
+      in: header
+tags:
+  - name: Entitlement Resources
+    description: Entitlement Resources Operations
+  - name: Subscription Resources
+    description: Subscription Resources Operations
