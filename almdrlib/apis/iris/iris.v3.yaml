@@ -26,7 +26,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Incident'
-              examples: 
+              examples:
                 Get Incident response example:
                   value:
                     accountId: number
@@ -131,11 +131,9 @@ paths:
               examples:
                 Friendly response example:
                   value:
-                    - {
-                      accountId: number,
-                      humanFriendlyId: string,
+                    - accountId: number
+                      humanFriendlyId: string
                       incidentId: string
-                    }
         '401':
           description: Unauthorized
         '403':
@@ -221,10 +219,10 @@ paths:
                         Results: string
                         TimeSlice: string
                         Total Query: string
-        '401':
-          description: Unauthorized
         '400':
           description: Bad request
+        '401':
+          description: Unauthorized
         '404':
           description: Not found
       operationId: get_associated_elaborations
@@ -247,19 +245,19 @@ paths:
           name: incident_id
           in: path
           required: true
-          description: Incident ID 
+          description: Incident ID
         - schema:
             type: string
           name: returnSource
           in: query
-          description: To filter by source type. Allowed values - log, event
+          description: 'To filter by source type. Allowed values - log, event'
         - schema:
             type: string
           name: return_value
           in: query
-          description: Comma delimted list of 'dot-notation' string names of desired properties in the result set. Use if you want only a subset of attributes from results   
+          description: "Comma delimted list of 'dot-notation' string names of desired properties in the result set. Use if you want only a subset of attributes from results"
   '/iris/v3/{account_id}/incidents_by_time':
-    'get':
+    get:
       summary: Get incidents in a timespan for account
       tags:
         - Incident operations
@@ -354,18 +352,177 @@ paths:
           name: start_time
           in: query
           required: true
-          description: Time to begin span, either epoch timestamp or an ISO string
+          description: 'Time to begin span, either epoch timestamp or an ISO string'
         - schema:
             type: string
           name: end_time
           in: query
           required: true
-          description: Time to end span, either epoch timestamp or an ISO string
+          description: 'Time to end span, either epoch timestamp or an ISO string'
         - schema:
             type: string
           name: return_value
           in: query
           description: Comma delimited list of dot-notation string names of desired properties in the result set. Use if you only want a subset of attributes from each incident
+  '/iris/v3/{account_id}/{incident_id}/complete':
+    post:
+      summary: Complete / close an incident
+      tags:
+        - UI operations
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompleteIncident'
+              examples:
+                Complete incident response example:
+                  value:
+                    new: 
+                      notes: This incident is closed because of x
+                      reason_code: further_action
+                      status: completed
+                      status_change_time: 2020-05-22T11:09:56.855569+00:00
+                    old:
+                      status: open
+                      status_change_time: 2020-05-22T07:54:33.555371+00:00
+        '400':
+          description: Bad request
+        '401':
+          description: Not authorized
+        '404':
+          description: Not found
+        '500':
+          description: Internal Server Error 
+      operationId: complete_incident
+      description: Complete/Close an incident
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -H "x-aims-auth-token: ${TOKEN}" -X POST https://api.cloudinsight.alertlogic.com/iris/v3/12341ab29e36-394e-11e9-a004-720004270420/complete -d '{"reason_code": "further_action", "notes": "This incident is closed because of y"}'
+      requestBody:
+        description:  'The value in notes will be displayed in the customer console as the reason for incident closure/completion. The value in reason code is used to classify the reason for closure.'
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+                  description: Notes about completion
+                reason_code:
+                  type: string
+                  description: Reason for completion
+                  enum:
+                    - further_action
+                    - acceptable_risk
+                    - compensating_control
+                    - threat_not_valid
+                    - not_concluded
+                    - other
+              required:
+                - notes
+                - reason_code
+            examples:
+              Complete incident body:
+                value:
+                  notes: This incident is because of X
+                  reason_code: compensating_control
+      parameters:
+        - schema:
+            type: string
+          name: account_id
+          in: path
+          required: true
+          description: AIMS Account ID
+        - schema:
+            type: string
+          name: incident_id
+          in: path
+          required: true
+          description: Incident ID
+  '/iris/v3/{account_id}/{incident_id}/feedback':
+    post:
+      summary: Add feedback to an incident
+      tags:
+        - UI operations
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerFeedback'
+              examples:
+                Add feedback response example:
+                  value:
+                    feedback: My feedback
+                    feedback_datetime: '2020-05-25T19:21:04.854130+00:00'
+                    feedback_reason: further_action
+                    feedback_uid: FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF
+                    feedback_user: 'User Name <user@email.org>'
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+      operationId: add_feedback
+      description: Add feedback to incident
+      security:
+        - X-AIMS-Auth-Token: []
+      x-code-samples:
+        - lang: Request Sample
+          source: |
+            curl -H "x-aims-auth-token: ${TOKEN}" -X POST https://api.cloudinsight.alertlogic.com/iris/v3/1234/1ab29e36-394e-11e9-a004-720004270420/feedback -d '{"customer_feedback": "My feedback", "customer_feedback_reason": "further_action"}'
+      requestBody:
+        description: 'The value in customer_feedback will be added to the incident and visible in the customer console, the value in customer_feedback_reason is used to classify the type of feedback.'
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_feedback:
+                  type: string
+                  description: Feedback to add to incident
+                customer_feedback_reason:
+                  type: string
+                  description: Reason for feedback
+                  enum:
+                    - further_action
+                    - acceptable_risk
+                    - compensating_control
+                    - threat_not_valid
+                    - not_concluded
+                    - other
+              required:
+                - customer_feedback
+                - customer_feedback_reason
+            examples:
+              Add customer feedback body:
+                value:
+                  customer_feedback: My feedback
+                  customer_feedback_reason: futher_action
+      parameters:
+        - schema:
+            type: string
+          name: account_id
+          in: path
+          required: true
+          description: AIMS Account ID
+        - schema:
+            type: string
+          name: incident_id
+          in: path
+          required: true
+          description: Incident ID
 components:
   schemas:
     Incident:
@@ -496,9 +653,64 @@ components:
     IncidentsByTime:
       title: IncidentsByTime
       type: array
-      items: 
+      items:
         $ref: '#/components/schemas/Incident'
       description: IncidentsByTime list
+    CustomerFeedback:
+      title: CustomerFeedback
+      type: object
+      description: Customer feedback response object
+      properties:
+        feedback:
+          type: string
+        feedback_user:
+          type: string
+        feedback_uid:
+          type: string
+        feedback_reason:
+          type: string
+        feedback_datetime:
+          type: string
+      required:
+        - feedback
+        - feedback_datetime
+        - feedback_reason
+        - feedback_uid
+        - feedback_user
+    CompleteIncident:
+      title: Incident completion responses
+      type: object
+      description: Incident completion response object
+      properties:
+        new:
+          type: object
+          properties:
+            notes:
+              type: string
+            reason_code:
+              type: string
+            status:
+              type: string
+            status_change_time:
+              type: string
+          required:
+            - notes
+            - reason_code
+            - status
+            - status_change_time
+        old:
+          type: object
+          properties:
+            status:
+              type: string
+            status_change_time:
+              type: string
+          required:
+            - status
+            - status_change_time
+      required:
+        - new
+        - old
   securitySchemes:
     X-AIMS-Auth-Token:
       name: X-AIMS-Auth-Token
@@ -508,3 +720,5 @@ components:
 tags:
   - name: Incident operations
     description: IRIS incident operations
+  - name: UI operations
+    description: IRIS operations available through the console
