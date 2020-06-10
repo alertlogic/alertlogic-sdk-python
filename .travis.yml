@@ -7,6 +7,7 @@ script: tox
 deploy:
   provider: pypi
   distributions: sdist bdist_wheel
+  skip_cleanup: true
   user: alertlogic
   password:
     secure: Y4wOV54F50M1X/6HQnSKf6sAVptK0vurXF2psQh/PwyqQy97jyVJmZvrEPeRJwjTx2zKO7+rvyKC8l/dJkI58l6XYlz/aFZwL4RXICNdcLQiEKcxd6rXfhB9wZZ+kr1CsX/cJYRgTJMGnVIx3wDo3FV3zHykDUS4WZTcbw1VlDT5ji4fcjbKtlKhyd3eRp3CnGdiDJ8d40Qw14gb8ys++PDJR+DPPNlTS3EFM2y9x/+UTCBg1GzckK+9NZXfLxkYJkSv514lFxjEzGbPY2V02z69yyH2zz/lOYh7hCRWSC2PrhIu/Q6K5w+7u8GZTR+ZBpjQuMhrtGmtFYHIkKNMvEIgRmnDVlR4SaThXpCBfbLBeceC2wT1RFegmUj8g4Wrq/kINBvY18sKtd/93Bgl6kdUxJiSHBMLtYifGeEn8eogkyys90E5a3U8FWHVhq4+6Q5IE9+idjzVS28sv+16V8M1XMmxvDhxBFbOP+XBKYJQyX9MEM2hnWlN7Q7QyFGdBpXdwkDl/DBTzN5JBRsyEivSWA485VCXoIhOlQ4ogpamekEDSw4SyOaAmsSb8o+i0ooc6TU8hmHb/kxX3uhovHJZnKUdG/cd1eecy3MTYVpvRCnaIRlcPIEKfc5TI/RBg7lNO9H4G5hmjJhYFBTEYOKLmlQoJSpUv3xHF0xRTwo=
