@@ -1,4 +1,4 @@
-__version__ = '1.0.26'
+__version__ = '1.0.27'
 __author__ = 'Alert Logic, Inc.'
 
 import logging
@@ -52,6 +52,7 @@ def client(service_name, version=None, session=None, *args, **kwargs):
         session = _get_default_session()
     return session.client(service_name, version, *args, **kwargs)
 
+
 def configure(
         profile=almdrlib.constants.DEFAULT_PROFILE,
         access_key_id=None, secret_key=None,
@@ -61,7 +62,6 @@ def configure(
             profile=profile,
             access_key_id=access_key_id, secret_key=secret_key,
             global_endpoint=global_endpoint, residency=residency)
-
 
 
 # Logging to dev/null

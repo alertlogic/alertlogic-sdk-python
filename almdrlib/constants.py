@@ -2,7 +2,7 @@
 
 import os.path
 
-DEFAULT_CONFIG_DIR =  os.path.join(os.path.expanduser("~"), ".alertlogic")
+DEFAULT_CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".alertlogic")
 DEFAULT_CONFIG_FILE = os.path.join(DEFAULT_CONFIG_DIR, "config")
 DEFAULT_CREDENTIALS_FILE = os.path.join(DEFAULT_CONFIG_DIR, "credentials")
 DEFAULT_PROFILE = "default"

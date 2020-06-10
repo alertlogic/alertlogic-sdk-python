@@ -4,6 +4,7 @@ import os.path
 import configparser
 import logging
 import almdrlib.constants
+from almdrlib.exceptions import AlmdrlibValueError
 
 logger = logging.getLogger(__name__)
 
@@ -154,10 +155,10 @@ class Config():
 
         try:
             parser.add_section(profile)
-        except configparser.DuplicateSectionError as e:
+        except configparser.DuplicateSectionError:
             # section alread exists.
             pass
-        except configparser.ValueError as e:
+        except configparser.ValueError:
             # almdrlib.constants.DEFAULT_PROFILE was passed as the section name
             pass
 

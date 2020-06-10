@@ -3,7 +3,7 @@ import logging
 import itertools
 try:
     from m2r import convert
-except Exception as e:
+except Exception:
     def convert(text):
         return text
 
