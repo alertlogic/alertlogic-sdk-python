@@ -2,7 +2,7 @@
 The Alert Logic SDK for Python documentation
 ============================================
 
-The Alert Logic SDK for Python enables developers to manage Aler Logic services.
+The Alert Logic SDK for Python enables developers to manage Alert Logic services.
 It provides an easy to consume interface.
 
 .. toctree::
