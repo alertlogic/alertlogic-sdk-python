@@ -1,13 +1,7 @@
 import re
-import ast
-from os import path
+import json
+from urllib import request
 from setuptools import setup, find_packages
-
-_version_re = re.compile(r'__version__\s+=\s+(.*)')
-
-with open('almdrlib/__init__.py', 'rb') as f:
-    version = str(ast.literal_eval(_version_re.search(
-        f.read().decode('utf-8')).group(1)))
 
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
@@ -15,19 +9,31 @@ with open('HISTORY.rst') as history_file:
 with open('README.md') as readme_file:
     readme = readme_file.read()
 
+try:
+    # This is to force definitions to be upgraded every build not related to the definitions change
+    defs_url_pypi = "https://pypi.org/pypi/alertlogic-sdk-definitions/json"
+    with request.urlopen(defs_url_pypi) as defs_rq:
+        defs_info = json.loads(defs_rq.read())
+    definitions_latest_version = defs_info['info']['version']
+    definitions_dependency = 'alertlogic-sdk-definitions>=' + definitions_latest_version
+except:
+    definitions_dependency = 'alertlogic-sdk-definitions>=0.0.4'
+
 requirements = [
         'requests>=2.18',
         'configparser>=4.0.2',
         'pyyaml==5.1.2',
         'jsonschema[format_nongpl]==3.2.0',
-        'm2r==0.2.1'
+        'm2r==0.2.1',
+        definitions_dependency
     ]
 
 test_requirements = [ ]
 
 setup(
     name='alertlogic-sdk-python',
-    version=version,
+    use_scm_version=True,
+    setup_requires=['setuptools_scm'],
     url='https://github.com/alertlogic/alertlogic-sdk-python',
     license='MIT license',
     author='Alert Logic Inc.',
