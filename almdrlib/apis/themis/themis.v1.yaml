@@ -12,7 +12,7 @@ servers:
     description: integration
     x-alertlogic-session-endpoint: true
 paths:
-  '/themis/v1/{account_id}/roles/{platform_type}/{role_type}/{role_version}':
+  '/plemis/v1/{account_id}/roles/{platform_type}/{role_type}/{role_version}':
     get:
       summary: Get role
       tags: []
