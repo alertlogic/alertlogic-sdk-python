@@ -5,6 +5,7 @@ import configparser
 import logging
 import almdrlib.constants
 from almdrlib.exceptions import AlmdrlibValueError
+import alsdkdefs
 
 logger = logging.getLogger(__name__)
 
@@ -204,7 +205,7 @@ class Config():
     @staticmethod
     def get_api_dir():
         api_dir = os.environ.get('ALERTLOGIC_API')
-        return api_dir and f"{api_dir}" or f"{os.path.dirname(__file__)}/apis"
+        return api_dir and f"{api_dir}" or alsdkdefs.get_apis_dir()
 
 
 def _get_config_parser(config_file=almdrlib.constants.DEFAULT_CONFIG_FILE):
