@@ -7,6 +7,7 @@
 Alert Logic Software Development Kit for Python allows developers to integrate with Alert Logic MDR Services.
 
 ## Quick Start
+
 1. Install the library:
 
 	```pip install alertlogic-sdk-python```
