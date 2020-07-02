@@ -1,3 +1,4 @@
+setuptools>=42
 pip>=19.0.3
 requests==2.22.0
 configparser==4.0.2

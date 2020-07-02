@@ -10,7 +10,7 @@ SPHINXPROJ    = alertlogic-sdk-python
 SOURCEDIR     = .
 BUILDDIR      = _build
 
-APISDIR       = ../almdrlib/apis
+APISDIR       = $(shell printf "import alsdkdefs\nprint(alsdkdefs.get_apis_dir())" | python)
 APIDOCSDIR	  = ./$(BUILDDIR)/api_html
 APISPECFILES  := $(shell find $(APISDIR) -name '*.yaml')
 APIDOCFILES   := $(subst $(APISDIR),$(APIDOCSDIR),$(APISPECFILES:%.yaml=%.html))
