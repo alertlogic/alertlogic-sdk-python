@@ -88,6 +88,7 @@ class Session():
                 aims_token=aims_token,
                 account_id=account_id,
                 profile=profile,
+                global_endpoint=global_endpoint,
                 residency=residency,
                 raise_for_status=raise_for_status)
 
