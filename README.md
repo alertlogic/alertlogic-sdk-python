@@ -52,7 +52,7 @@ Launch python interpreter and then type:
 
 #### Prerequisites:
 
-1. *Python v3.7* or older
+1. *Python v3.7* or newer
 2. *virtualenv* or *virtualenvwrapper* (We recommend ***virtualenvwrapper***  <https://virtualenvwrapper.readthedocs.io/en/latest/> )
 3. To produce RESTful APIs documentation install *redoc-cli* and *npx*:
 
