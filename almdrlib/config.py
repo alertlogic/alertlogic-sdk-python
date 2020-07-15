@@ -54,7 +54,7 @@ class Config():
             self._config_file = almdrlib.constants.DEFAULT_CONFIG_FILE
 
         logger.debug(
-                f"Initializing configuration using " +
+                "Initializing configuration using " +
                 f"'{self._config_file}' configuration file")
         if access_key_id or secret_key:
             self._access_key_id = access_key_id
@@ -86,7 +86,7 @@ class Config():
         else:
             self._initialize_defaults()
 
-        logger.debug(f"Finished configuraiton initialization. " +
+        logger.debug("Finished configuraiton initialization. " +
                      f"access_key_id={self._access_key_id}, " +
                      f"account_id={self._account_id}, " +
                      f"global_endpoint={self._global_endpoint}")

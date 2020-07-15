@@ -26,6 +26,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+almdrlib/version.py
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -128,4 +129,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# IntelliJ
 *.iml
+.idea

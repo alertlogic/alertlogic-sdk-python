@@ -72,6 +72,14 @@ class OpenAPIKeyWord:
     DEFAULT = "default"
     ENCODING = "encoding"
     EXPLODE = "explode"
+    STYLE = "style"
+    PARAMETER_STYLE_MATRIX = "matrix"
+    PARAMETER_STYLE_LABEL = "label"
+    PARAMETER_STYLE_FORM = "form"
+    PARAMETER_STYLE_SIMPLE = "simple"
+    PARAMETER_STYLE_SPACE_DELIMITED = "spaceDelimited"
+    PARAMETER_STYLE_PIPE_DELIMITED = "pipeDelimited"
+    PARAMETER_STYLE_DEEP_OBJECT = "deepObject"
     DATA = "data"
     CONTENT_TYPE_PARAM = "content-type"
     CONTENT_TYPE_JSON = "application/json"
@@ -405,10 +413,14 @@ class PathParameter(object):
         self._init_name(spec[OpenAPIKeyWord.NAME])
         self._required = spec.get(OpenAPIKeyWord.REQUIRED, False)
         self._description = spec.get(OpenAPIKeyWord.DESCRIPTION, "")
-        self._dataype = get_dict_value(
+        self._datatype = get_dict_value(
                             spec,
                             [OpenAPIKeyWord.SCHEMA, OpenAPIKeyWord.TYPE],
                             OpenAPIKeyWord.STRING)
+        self._style = spec.get(OpenAPIKeyWord.STYLE,
+                               self.default_style(self._in))
+        self._explode = spec.get(OpenAPIKeyWord.EXPLODE,
+                                 self.default_explode(self._style))
         self._spec = spec
         self._session = session
         self._default = None
@@ -435,7 +447,7 @@ class PathParameter(object):
 
     @property
     def datatype(self):
-        return self._dataype
+        return self._datatype
 
     @property
     def default(self):
@@ -462,20 +474,84 @@ class PathParameter(object):
                 raise ValueError(f"'{self._name}' is required")
             return
 
+        raw_value = kwargs.pop(self._name, self.default)
+
         value = serialize_value(
-                self._dataype,
-                kwargs.pop(self._name, self.default))
+                self._datatype,
+                raw_value)
 
         if self._in == OpenAPIKeyWord.PATH:
             path_params[self.schema_name] = value
         elif self._in == OpenAPIKeyWord.QUERY:
-            query_params[self.schema_name] = value
+            new_query_params = self.serialize_query_parameter(self._style,
+                                                              self._explode,
+                                                              self._name,
+                                                              self._datatype,
+                                                              raw_value)
+            query_params.update(new_query_params)
         elif self._in == OpenAPIKeyWord.HEADER:
             headers[self.schema_name] = value
         elif self._in == OpenAPIKeyWord.COOKIE:
             cookies[self.schema_name] = value
 
         return True
+
+    @classmethod
+    def default_style(cls, parameter_in):
+        if parameter_in == OpenAPIKeyWord.QUERY:
+            return OpenAPIKeyWord.PARAMETER_STYLE_FORM
+        elif parameter_in == OpenAPIKeyWord.PATH:
+            return OpenAPIKeyWord.PARAMETER_STYLE_SIMPLE
+        elif parameter_in == OpenAPIKeyWord.HEADER:
+            return OpenAPIKeyWord.PARAMETER_STYLE_SIMPLE
+        elif parameter_in == OpenAPIKeyWord.COOKIE:
+            return OpenAPIKeyWord.PARAMETER_STYLE_FORM
+        else:
+            return OpenAPIKeyWord.PARAMETER_STYLE_SIMPLE
+
+    @classmethod
+    def default_explode(cls, style):
+        if style == OpenAPIKeyWord.PARAMETER_STYLE_FORM:
+            return True
+        else:
+            return False
+
+    @classmethod
+    def serialize_query_parameter(cls, style, explode, name, datatype, value):
+        # Implements partial query parameter serialization using rules from:
+        # https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#style-examples
+        # https://swagger.io/docs/specification/serialization/#query
+        # TODO: Serialize deepObject style
+        valid_styles = [OpenAPIKeyWord.PARAMETER_STYLE_FORM,
+                        OpenAPIKeyWord.PARAMETER_STYLE_SPACE_DELIMITED,
+                        OpenAPIKeyWord.PARAMETER_STYLE_PIPE_DELIMITED]
+        if style not in valid_styles:
+            raise ValueError(f"{name} query parameter has invalid style: "
+                             f"{style}")
+            return
+
+        if (datatype == OpenAPIKeyWord.OBJECT and
+                style == OpenAPIKeyWord.PARAMETER_STYLE_FORM):
+            if explode:
+                return value
+            else:
+                serialized_pairs = [f'{a},{b}' for (a, b) in value.items()]
+                return {name: ",".join(serialized_pairs)}
+        elif datatype == OpenAPIKeyWord.ARRAY:
+            if explode:
+                return {name: value}
+            else:
+                if style == OpenAPIKeyWord.PARAMETER_STYLE_SPACE_DELIMITED:
+                    delimiter = " "
+                elif style == OpenAPIKeyWord.PARAMETER_STYLE_PIPE_DELIMITED:
+                    delimiter = "|"
+                else:
+                    # Implicitly 'form' style
+                    delimiter = ","
+                return {name: delimiter.join(value)}
+        else:
+            return {name: value}
+        return None
 
 
 class Operation(object):
@@ -704,7 +780,7 @@ class Client(object):
                 ]
             ]
         ):
-            raise ValueError("Invaliad openapi document")
+            raise ValueError("Invalid OpenAPI document")
 
         self._spec = spec.copy()
         _spec = spec.copy()
