@@ -127,7 +127,7 @@ class Session():
         else:
             self._access_key_id, self._secret_key = self._config.get_auth()
 
-        logger.info(
+        logger.debug(
                 "Initialized session. "
                 f"access_key_id={self._access_key_id}, "
                 f"account_id={self._account_id}, "
