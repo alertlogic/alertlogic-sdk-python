@@ -103,7 +103,7 @@ class Session():
         account_id = kwargs.get('account_id')
         profile = kwargs.get('profile')
         global_endpoint = kwargs.get('global_endpoint')
-        residency = kwargs.get('residency', 'us')
+        residency = kwargs.get('residency', 'default')
         aims_token = kwargs.get('aims_token')
 
         self._config = Config(
@@ -127,12 +127,14 @@ class Session():
         else:
             self._access_key_id, self._secret_key = self._config.get_auth()
 
-        logger.debug("Initialized session. "
-                     f"access_key_id={self._access_key_id}, "
-                     f"account_id={self._account_id}, "
-                     f"profile={profile}, "
-                     f"global_endpoint={self._global_endpoint}"
-                     )
+        logger.info(
+                "Initialized session. "
+                f"access_key_id={self._access_key_id}, "
+                f"account_id={self._account_id}, "
+                f"profile={profile}, "
+                f"global_endpoint={self._global_endpoint}, "
+                f"residency={self._residency}"
+            )
 
     def _authenticate(self):
         """
