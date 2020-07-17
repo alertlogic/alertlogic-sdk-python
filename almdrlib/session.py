@@ -41,7 +41,7 @@ class Session():
     def __init__(
             self, access_key_id=None, secret_key=None, aims_token=None,
             account_id=None, profile=None, global_endpoint=None,
-            residency="us", raise_for_status=True):
+            residency="default", raise_for_status=True):
         """
         :param region: a Region object
         :param access_key_id: your Alert Logic ActiveWatchaccess_key_id
