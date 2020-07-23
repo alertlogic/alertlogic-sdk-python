@@ -7,7 +7,7 @@ except Exception:
     def convert(text):
         return text
 
-from almdrlib.client import OpenAPIKeyWord
+from alsdkdefs import OpenAPIKeyWord
 
 logger = logging.getLogger(__name__)
 

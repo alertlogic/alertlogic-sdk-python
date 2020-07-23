@@ -16,6 +16,7 @@ from requests.packages.urllib3.util.retry import Retry
 from almdrlib.config import Config
 from almdrlib.region import Region
 from almdrlib.client import Client
+import alsdkdefs
 
 logger = logging.getLogger(__name__)
 
@@ -299,7 +300,7 @@ class Session():
 
     @staticmethod
     def list_services():
-        return sorted(next(os.walk(Config.get_api_dir()))[1])
+        return alsdkdefs.list_services()
 
     @staticmethod
     def get_service_api(service_name, version=None):

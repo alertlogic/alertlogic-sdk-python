@@ -9,7 +9,7 @@ import unittest
 from almdrlib.session import Session
 from almdrlib.client import Client
 from almdrlib.client import Operation
-from almdrlib.client import OpenAPIKeyWord
+from alsdkdefs import OpenAPIKeyWord
 
 
 class TestSdk_open_api_support(unittest.TestCase):
@@ -33,8 +33,6 @@ class TestSdk_open_api_support(unittest.TestCase):
 
     def test_000_getting_schemas(self):
         """Test listing services."""
-        services = Session.list_services()
-        self.assertTrue(self._service_name in services)
         self.assertTrue(len(Session.get_service_api("testapi")))
         print(f"SCHEMA: {json.dumps(Session.get_service_api('testapi'))}")
 
@@ -66,7 +64,7 @@ class TestSdk_open_api_support(unittest.TestCase):
             self.assertIsNot(schema, {})
 
             t_operation_parameters = t_operation_schema[
-                                        OpenAPIKeyWord.PARAMETERS]
+                OpenAPIKeyWord.PARAMETERS]
 
             operation_parameters = schema[OpenAPIKeyWord.PARAMETERS]
             for name, value in t_operation_parameters.items():
@@ -74,7 +72,7 @@ class TestSdk_open_api_support(unittest.TestCase):
 
             if OpenAPIKeyWord.CONTENT in t_operation_schema:
                 t_operation_content = t_operation_schema[
-                                            OpenAPIKeyWord.CONTENT]
+                    OpenAPIKeyWord.CONTENT]
                 operation_content = schema[OpenAPIKeyWord.CONTENT]
                 for name, value in t_operation_content.items():
                     self.assertEqual(value, operation_content[name])
