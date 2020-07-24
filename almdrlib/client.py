@@ -6,98 +6,19 @@
     almdrlib OpenAPI v3 dynamic client builder
 """
 
-import os
-import glob
-import io
 import abc
 # import typing
 # import inspect
 import logging
-import yaml
 import json
-import collections
 import jsonschema
 from jsonschema.validators import validator_for
-from functools import reduce
+import alsdkdefs
 
 from almdrlib.exceptions import AlmdrlibValueError
 from almdrlib.config import Config
 
-
-class OpenAPIKeyWord:
-    OPENAPI = "openapi"
-    INFO = "info"
-    TITLE = "title"
-
-    SERVERS = "servers"
-    URL = "url"
-    SUMMARY = "summary"
-    DESCRIPTION = "description"
-    VARIABLES = "variables"
-    REF = "$ref"
-    REQUEST_BODY_NAME = "x-alertlogic-request-body-name"
-    RESPONSES = "responses"
-    PATHS = "paths"
-    OPERATION_ID = "operationId"
-    PARAMETERS = "parameters"
-    REQUEST_BODY = "requestBody"
-    IN = "in"
-    PATH = "path"
-    QUERY = "query"
-    HEADER = "header"
-    COOKIE = "cookie"
-    BODY = "body"
-    NAME = "name"
-    REQUIRED = "required"
-    SCHEMA = "schema"
-    TYPE = "type"
-    STRING = "string"
-    OBJECT = "object"
-    ITEMS = "items"
-    ALL_OF = "allOf"
-    ONE_OF = "oneOf"
-    ANY_OF = "anyOf"
-    BOOLEAN = "boolean"
-    INTEGER = "integer"
-    ARRAY = "array"
-    NUMBER = "number"
-    FORMAT = "format"
-    ENUM = "enum"
-    SECURITY = "security"
-    COMPONENTS = "components"
-    SCHEMAS = "schemas"
-    PROPERTIES = "properties"
-    REQUIRED = "required"
-    CONTENT = "content"
-    DEFAULT = "default"
-    ENCODING = "encoding"
-    EXPLODE = "explode"
-    STYLE = "style"
-    PARAMETER_STYLE_MATRIX = "matrix"
-    PARAMETER_STYLE_LABEL = "label"
-    PARAMETER_STYLE_FORM = "form"
-    PARAMETER_STYLE_SIMPLE = "simple"
-    PARAMETER_STYLE_SPACE_DELIMITED = "spaceDelimited"
-    PARAMETER_STYLE_PIPE_DELIMITED = "pipeDelimited"
-    PARAMETER_STYLE_DEEP_OBJECT = "deepObject"
-    DATA = "data"
-    CONTENT_TYPE_PARAM = "content-type"
-    CONTENT_TYPE_JSON = "application/json"
-    CONTENT_TYPE_TEXT = "text/plain"
-    CONTENT_TYPE_PYTHON_PARAM = "content_type"
-
-    RESPONSE = "response"
-    EXCEPTIONS = "exceptions"
-    JSON_CONTENT_TYPES = ["application/json", "alertlogic.com/json"]
-
-    SIMPLE_DATA_TYPES = [STRING, BOOLEAN, INTEGER, NUMBER]
-    DATA_TYPES = [STRING, OBJECT, ARRAY, BOOLEAN, INTEGER, NUMBER]
-    INDIRECT_TYPES = [ANY_OF, ONE_OF]
-
-    # Alert Logic specific extensions
-    X_ALERTLOGIC_SCHEMA = "x-alertlogic-schema"
-    X_ALERTLOGIC_SESSION_ENDPOINT = "x-alertlogic-session-endpoint"
-
+from alsdkdefs import OpenAPIKeyWord
 
 logger = logging.getLogger(__name__)
 
@@ -711,34 +632,10 @@ class Client(object):
         self.load_service_spec(name, version, variables)
 
     def load_service_spec(self, service_name, version=None, variables=None):
-        service_spec_file = ""
-        service_api_dir = f"{Config.get_api_dir()}/{service_name}"
-        if not version:
-            # Find the latest version of the service api spes
-            version = 0
-            for file in glob.glob(f"{service_api_dir}/{service_name}.v*.yaml"):
-                file_name = os.path.basename(file)
-                new_version = int(file_name.split(".")[1][1:])
-                version = version > new_version and version or new_version
-        else:
-            version = version[:1] != "v" and version or version[1:]
-
-        service_spec_file = f"{service_api_dir}/{service_name}.v{version}.yaml"
         logger.debug(
             f"Initializing client for '{self._name}'" +
-            f"Spec: '{service_spec_file}' Variables: '{variables}'")
-
-        #
-        # Load spec file
-        #
-        spec = _get_spec(service_spec_file)
-
-        #
-        # Resolve `#ref` references
-        # Normalize spec for easier processing
-        #
-        _normalize_spec(service_spec_file, spec)
-
+            f"Spec: '{service_name}' Variables: '{variables}'")
+        spec = alsdkdefs.load_service_spec(service_name, Config.get_api_dir(), version)
         self.load_spec(spec, variables)
 
     @property
@@ -886,69 +783,6 @@ class Client(object):
         )
 
 
-#
-# Dictionaries don't preserve the order. However, we want to guarantee
-# that loaded yaml files are in the exact same order to, at least
-# produce the documentation that matches spec's order
-#
-class _YamlOrderedLoader(yaml.SafeLoader):
-    pass
-
-
-_YamlOrderedLoader.add_constructor(
-    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
-    lambda loader, node: collections.OrderedDict(loader.construct_pairs(node))
-)
-
-
-def _get_spec(file_path, encoding="utf8"):
-    with io.open(file_path, 'rt', encoding=encoding) as stream:
-        return yaml.load(stream, _YamlOrderedLoader)
-
-
-def _resolve_refs(file_uri, spec):
-    ''' Resolve all schema references '''
-    resolver = jsonschema.RefResolver(file_uri, spec)
-
-    def _do_resolve(node):
-        if isinstance(node, collections.abc.Mapping) \
-                and OpenAPIKeyWord.REF in node:
-            with resolver.resolving(node[OpenAPIKeyWord.REF]) as resolved:
-                return resolved
-        elif isinstance(node, collections.abc.Mapping):
-            for k, v in node.items():
-                node[k] = _do_resolve(v)
-            _normalize_node(node)
-        elif isinstance(node, (list, tuple)):
-            for i in range(len(node)):
-                node[i] = _do_resolve(node[i])
-
-        return node
-
-    return _do_resolve(spec)
-
-
-def _normalize_node(node):
-    if OpenAPIKeyWord.ALL_OF in node:
-        update_dict_no_replace(
-            node,
-            dict(reduce(deep_merge, node.pop(OpenAPIKeyWord.ALL_OF)))
-        )
-
-
-def _normalize_spec(spec_file_path, spec):
-    # Resolve all #ref in the spec file
-    # spec_file_path must be absolute path to the spec file
-    uri = f"file://{spec_file_path}"
-    spec = _resolve_refs(uri, spec)
-
-    for path in spec[OpenAPIKeyWord.PATHS].values():
-        parameters = path.pop(OpenAPIKeyWord.PARAMETERS, [])
-        for method in path.values():
-            method.setdefault(OpenAPIKeyWord.PARAMETERS, [])
-            method[OpenAPIKeyWord.PARAMETERS].extend(parameters)
-
-
 def _normalize_schema(name, schema, required=False):
     properties = schema.get(OpenAPIKeyWord.PROPERTIES)
     if properties and bool(properties):
@@ -964,25 +798,6 @@ def _normalize_schema(name, schema, required=False):
     if required:
         result[OpenAPIKeyWord.REQUIRED] = [name]
     return result
-
-
-def deep_merge(target, source):
-    # Merge source into the target
-    for k in set(target.keys()).union(source.keys()):
-        if k in target and k in source:
-            if isinstance(target[k], dict) and isinstance(source[k], dict):
-                yield (k, dict(deep_merge(target[k], source[k])))
-            elif type(target[k]) is list and type(source[k]) is list:
-                # TODO: Handle arrays of objects
-                yield (k, list(set(target[k] + source[k])))
-            else:
-                # If one of the values is not a dict,
-                # value from target dict overrides the one in source
-                yield (k, target[k])
-        elif k in target:
-            yield (k, target[k])
-        else:
-            yield (k, source[k])
 
 
 def get_dict_value(dict, list, default=None):
