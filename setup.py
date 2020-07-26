@@ -17,7 +17,7 @@ try:
     definitions_latest_version = defs_info['info']['version']
     definitions_dependency = 'alertlogic-sdk-definitions>=' + definitions_latest_version
 except:
-    definitions_dependency = 'alertlogic-sdk-definitions>=v0.0.30'
+    definitions_dependency = 'alertlogic-sdk-definitions>=0.0.31'
 
 requirements = [
         'requests>=2.18',
