@@ -3,6 +3,7 @@
 import os.path
 import configparser
 import logging
+import json
 import almdrlib.constants
 from almdrlib.exceptions import AlmdrlibValueError
 import alsdkdefs
@@ -17,7 +18,7 @@ class ConfigException(Exception):
 
 class Config():
     """
-    Reads configuraiton parameters from either environment variables
+    Reads configuration parameters from either environment variables
         or from configuration file
 
     Environment Variables:
@@ -25,10 +26,11 @@ class Config():
     ~/.alertlogic/credentials is used
     ALERTLOGIC_PROFILE - Profile to be used.
     If not specified [default] section is used
-    ALERTLOGIC_ACCESS_KEY_ID - Acceess Key Id
+    ALERTLOGIC_ACCESS_KEY_ID - Access Key Id
     ALERTLOGIC_SECRET_KEY - Secret Key
-    ALERTLOGIC_ENDPOINT - production or integration are supported values
-    ALERTLOGIC_ACCOUNT_ID - Account Id to perform operatins against.
+    ALERTLOGIC_ENDPOINT - production, integration, or map are supported values
+    ALERTLOGIC_ENDPOINT_MAP - (full or relative to config directory) path of a json file mapping services to endpoints
+    ALERTLOGIC_ACCOUNT_ID - Account Id to perform operations against.
     ALERTLOGIC_RESIDENCY - Data Residency when creating new deployments
     ALERTLOGIC_API  - Directory where OpenAPI yaml files reside
 
@@ -36,6 +38,7 @@ class Config():
     access_key_id - User's AIMS Access Key ID
     secret_key - Secret Key associated with 'access_key_id'
     global_endpoint - if not specified, 'production' endpoint is used
+    endpoint_map_file - if not specified, 'endpoint_map.json' in the config directory (default: ~/.alertlogic) is used
     account_id - if not specified, the account id of the access_key_id is used
     residency - if not specified, 'us' residency is used
 
@@ -48,6 +51,7 @@ class Config():
                  account_id=None,
                  profile=None,
                  global_endpoint=None,
+                 endpoint_map_file=None,
                  residency=None):
         self._config_file = os.environ.get('ALERTLOGIC_CONFIG')
         if self._config_file is None:
@@ -66,6 +70,10 @@ class Config():
         self._global_endpoint = \
             global_endpoint or \
             os.environ.get('ALERTLOGIC_ENDPOINT')
+
+        self._endpoint_map_file = \
+            endpoint_map_file or \
+            os.environ.get('ALERTLOGIC_ENDPOINT_MAP')
 
         self._residency = \
             residency or \
@@ -120,6 +128,22 @@ class Config():
                 'global_endpoint',
                 almdrlib.constants.DEFAULT_GLOBAL_ENDPOINT)
 
+        self._endpoint_map_file = \
+            self._endpoint_map_file or self._get_config_option(
+                'endpoint_map_file',
+                almdrlib.constants.DEFAULT_ENDPOINT_MAP_FILE)
+        self._endpoint_map_file = \
+            self._endpoint_map_file or \
+            almdrlib.constants.DEFAULT_ENDPOINT_MAP_FILE
+
+        if self._global_endpoint == "map":
+            if os.path.isabs(self._endpoint_map_file):
+                path = self._endpoint_map_file
+            else:
+                path = os.path.join(almdrlib.constants.DEFAULT_CONFIG_DIR, self._endpoint_map_file)
+            with open(path) as json_file:
+                self._endpoint_map = json.load(json_file)
+
         self._residency = \
             self._residency or \
             self._get_config_option(
@@ -144,6 +168,7 @@ class Config():
             account_id=None,
             access_key_id=None, secret_key=None,
             global_endpoint=None,
+            endpoint_map_file=None,
             residency=None):
 
         if not access_key_id:
@@ -165,10 +190,15 @@ class Config():
 
         parser.set(profile, 'access_key_id', access_key_id)
         parser.set(profile, 'secret_key', secret_key)
+
         if account_id:
             parser.set(profile, 'account_id', account_id)
+
         if global_endpoint:
             parser.set(profile, 'global_endpoint', global_endpoint)
+
+        if endpoint_map_file:
+            parser.set(profile, 'endpoint_map_file', endpoint_map_file)
 
         if residency:
             parser.set(profile, 'residency', residency)
@@ -197,6 +227,10 @@ class Config():
     @property
     def global_endpoint(self):
         return self._global_endpoint
+
+    @property
+    def endpoint_map(self):
+        return self._endpoint_map
 
     @property
     def residency(self):

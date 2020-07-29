@@ -79,3 +79,28 @@ pip install -r requirements_dev.txt
 pip install -e .
 ```
     
+### Using local services
+
+- Setup a local profile:
+
+```
+[aesolo]
+access_key_id=skip
+secret_key=skip
+global_endpoint=map
+endpoint_map_file=aesolo.json
+```
+
+- Write an endpoint map (here, `~/.alertlogic/aesolo.json`; `endpoint_map_file` can also be an absolute path):
+
+```
+{
+  "aecontent" : "http://127.0.0.1:8810",
+  "aefr" : "http://127.0.0.1:8808",
+  "aepublish" : "http://127.0.0.1:8811",
+  "aerta" : "http://127.0.0.1:8809",
+  "aetag" : "http://127.0.0.1:8812",
+  "aetuner": "http://127.0.0.1:3000",
+  "ingest" : "http://127.0.0.1:9000"
+}
+```
