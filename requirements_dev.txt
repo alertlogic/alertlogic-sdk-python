@@ -9,7 +9,7 @@ Sphinx==3.0.1
 httpretty==0.9.7
 requests==2.22.0
 pycodestyle==2.5.0
-twine==1.13.0
+twine==3.2.0
 configparser==4.0.2
 sphinx_rtd_theme==0.4.3
 sphinxcontrib_contentui==0.2.4
