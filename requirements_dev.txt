@@ -6,7 +6,7 @@ flake8==3.7.8
 tox==3.14.0
 coverage==4.5.4
 Sphinx==3.0.1
-httpretty==0.9.7
+httpretty==1.0.2
 requests==2.22.0
 pycodestyle==2.5.0
 twine==1.13.0
