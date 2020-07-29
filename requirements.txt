@@ -1,6 +1,6 @@
 setuptools>=42
 pip>=19.0.3
-requests==2.22.0
+requests==2.24.0
 configparser==4.0.2
 pyyaml==5.1.2
 jsonschema[format_nongpl]==3.2.0
