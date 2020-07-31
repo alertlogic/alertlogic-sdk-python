@@ -59,7 +59,7 @@ class Session():
                             the account id of the access_key_id is used.
         :param: profile: name of the profile section of the configuration file
         :param: global_endpoint: Name of the global endpoint.
-                                 'production' or 'integration' are
+                                 'production', 'integration', or 'map' are
                                  the only valid values
         :param residency: Data residency name to perform
                           data residency dependend actions.
@@ -119,6 +119,7 @@ class Session():
         self._account_id = self._config.account_id
         self._residency = self._config.residency
         self._global_endpoint = self._config.global_endpoint
+        self._endpoint_map = self._config.endpoint_map
         self._global_endpoint_url = Region.get_global_endpoint(
                                                         self._global_endpoint)
         self._raise_for_status = kwargs.get('raise_for_status')
@@ -145,6 +146,14 @@ class Session():
         """
 
         if not self._token:
+            if self._access_key_id == "skip" and self._secret_key == "skip":
+                logger.info(
+                        f"Skipping authentication."
+                    )
+                self._token = ""
+                self._account_id = ""
+                self._account_name = ""
+                return
             logger.info(
                     f"Authenticating '{self._access_key_id}' " +
                     f"user against '{self._global_endpoint_url}' endpoint."
@@ -238,6 +247,8 @@ class Session():
         return _client
 
     def get_url(self, service_name, account_id=None):
+        if self._global_endpoint == "map":
+            return self.get_mapped_url(service_name, account_id)
         try:
             response = self.request(
                 'get',
@@ -252,6 +263,10 @@ class Session():
                     f"invalid http response from endpoints service {e}"
                 )
         return "https://{}".format(response.json()[service_name])
+
+    def get_mapped_url(self, service_name, account_id):
+        map = self._endpoint_map
+        return map[service_name]
 
     def request(
             self,
