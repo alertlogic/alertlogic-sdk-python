@@ -339,7 +339,7 @@ def get_param_spec(spec):
 
 
 def get_param_type(spec):
-    type = spec.get('type')
+    type = spec.get('type', 'object')
     format = spec.get('format')
 
     if type == 'object':
