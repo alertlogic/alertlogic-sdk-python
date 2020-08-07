@@ -53,6 +53,7 @@ class Config():
                  endpoint_map_file=None,
                  residency=None):
         self._config_file = os.environ.get('ALERTLOGIC_CONFIG')
+        self._endpoint_map = None
         if self._config_file is None:
             self._config_file = almdrlib.constants.DEFAULT_CONFIG_FILE
 

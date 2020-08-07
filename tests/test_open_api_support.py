@@ -8,6 +8,7 @@ import unittest
 
 from almdrlib.session import Session
 from almdrlib.client import Client
+from almdrlib.client import Config
 from almdrlib.client import Operation
 from alsdkdefs import OpenAPIKeyWord
 
@@ -76,3 +77,9 @@ class TestSdk_open_api_support(unittest.TestCase):
                 operation_content = schema[OpenAPIKeyWord.CONTENT]
                 for name, value in t_operation_content.items():
                     self.assertEqual(value, operation_content[name])
+
+    def test_003_default_objects_creation(self):
+        """Checks initialisation at least happens"""
+        self.assertIsInstance(Session(), Session)
+        self.assertIsInstance(Config(), Config)
+        self.assertIsInstance(Client(self._service_name), Client)
