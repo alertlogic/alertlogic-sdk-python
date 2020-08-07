@@ -470,9 +470,10 @@ class PathParameter(object):
                     # Implicitly 'form' style
                     delimiter = ","
                 return {name: delimiter.join(value)}
+        elif datatype == OpenAPIKeyWord.BOOLEAN:
+            return {name: str(value).lower()}
         else:
             return {name: value}
-        return None
 
 
 class Operation(object):
