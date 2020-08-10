@@ -1,17 +1,26 @@
 language: python
-python:
-- 3.8
-- 3.7
-install: pip install -U tox-travis
-script: tox
-deploy:
-  provider: pypi
-  distributions: sdist bdist_wheel
-  skip_cleanup: true
-  user: __token__
-  password:
-    secure: e8z6hgXQP3Ga3o6fIx7e0/lmuiPhicmVGBo4Y67R7LEhniAhvzJkbMyPvHS03fZT5/n5W8sz4SshNnM7TxC2RU8aGU4rFTLDu52VKisqEOQX6SYtpYYOm7A5K5+W1raEsbU4/MZ4qVc7sMBVojTc75DNHQejZd2F4d9QVnbmbWkYoFSmIDSeFZgwoCMGslzsUVNg9GJnZx8dGxlMvqMNw9nlcORV8Hgo8OUA9sI8sy349OVHv5PJgOYVMAdTYvfsSB/QCt8yurOGoJlf11IdKNpg/Rltdb5kIDthD5iYyqgRL11cjCLuOAooFhB2TKPAikvkuZeDcjSImpyyspih/e4CuXV84IF3qkaOZdQngTlne+obsTY4c7EYrGK3Viu8U52Wodm+3QL/3y7V12ybG+t+4DxCYsQMmt5JDkK2zQ8oDY9BW4PYvINsK5WVYg4X8bgDAKtaGwiNRYAzF9T8Ls488Ab22sGyIicn4t9FPp6Hkfjjbc2Y8SVpnSuZ19pndNJhYLsp2RK0myrcXykAkajDgoPGX8//nV5K7uATYJAxQ4BHZv6BIMRScPkO6WyAsf/YaptIKbU1JeIDm7VGqaCLQbabexjHPxK4B/K6fO0onX1Ei3yJFqJlqFps7a59k1m1fxWuNy558dQTXxyUEPKVhOIUhZoIJcPu8b26+Zs=
-  on:
-    tags: true
-    repo: alertlogic/alertlogic-sdk-python
-    python: 3.8
+jobs:
+  include:
+    - stage: test
+      python: 3.8
+      install: pip install -U tox-travis
+      script: tox
+    - stage: test_doc
+      python: 3.8
+      install: pip install -r docs/requirements.txt
+      script: cd docs; make html
+    - stage: deploy
+      python: 3.8
+      install: pip install -U tox-travis
+      script: tox
+      deploy:
+        provider: pypi
+        distributions: sdist bdist_wheel
+        skip_cleanup: true
+        user: __token__
+        password:
+          secure: e8z6hgXQP3Ga3o6fIx7e0/lmuiPhicmVGBo4Y67R7LEhniAhvzJkbMyPvHS03fZT5/n5W8sz4SshNnM7TxC2RU8aGU4rFTLDu52VKisqEOQX6SYtpYYOm7A5K5+W1raEsbU4/MZ4qVc7sMBVojTc75DNHQejZd2F4d9QVnbmbWkYoFSmIDSeFZgwoCMGslzsUVNg9GJnZx8dGxlMvqMNw9nlcORV8Hgo8OUA9sI8sy349OVHv5PJgOYVMAdTYvfsSB/QCt8yurOGoJlf11IdKNpg/Rltdb5kIDthD5iYyqgRL11cjCLuOAooFhB2TKPAikvkuZeDcjSImpyyspih/e4CuXV84IF3qkaOZdQngTlne+obsTY4c7EYrGK3Viu8U52Wodm+3QL/3y7V12ybG+t+4DxCYsQMmt5JDkK2zQ8oDY9BW4PYvINsK5WVYg4X8bgDAKtaGwiNRYAzF9T8Ls488Ab22sGyIicn4t9FPp6Hkfjjbc2Y8SVpnSuZ19pndNJhYLsp2RK0myrcXykAkajDgoPGX8//nV5K7uATYJAxQ4BHZv6BIMRScPkO6WyAsf/YaptIKbU1JeIDm7VGqaCLQbabexjHPxK4B/K6fO0onX1Ei3yJFqJlqFps7a59k1m1fxWuNy558dQTXxyUEPKVhOIUhZoIJcPu8b26+Zs=
+        on:
+          tags: true
+          repo: alertlogic/alertlogic-sdk-python
+          python: 3.8
