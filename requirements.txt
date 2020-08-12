@@ -5,3 +5,4 @@ configparser==4.0.2
 pyyaml==5.1.2
 jsonschema[format_nongpl]==3.2.0
 git+https://github.com/crossnox/m2r@dev#egg=m2r
+future_fstrings
