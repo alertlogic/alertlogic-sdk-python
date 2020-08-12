@@ -25,6 +25,7 @@ requirements = [
         'pyyaml==5.1.2',
         'jsonschema[format_nongpl]==3.2.0',
         'm2r==0.2.1',
+        'future_fstrings',
         definitions_dependency
     ]
 
@@ -38,7 +39,7 @@ setup(
     license='MIT license',
     author='Alert Logic Inc.',
     author_email='devsupport@alertlogic.com',
-    python_requires='>=3.6',
+    python_requires='>=3.5',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
@@ -47,6 +48,7 @@ setup(
         'Operating System :: MacOS :: MacOS X',
         'Operating System :: Microsoft :: Windows',
         'Operating System :: POSIX',
+        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8'

@@ -1,3 +1,5 @@
+# -*- coding: future_fstrings -*-
+
 __author__ = 'Alert Logic, Inc.'
 
 import logging

@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# -*- coding: future_fstrings -*-
+
 import os
 import json
 
