@@ -19,6 +19,7 @@ jobs:
       install: pip install -r docs/requirements.txt
       script: cd docs; make html
     - stage: deploy
+      if: type = push AND tag =~ /^v\d*\.\d*\.\d*$/
       python: 3.8
       install: pip install -U tox-travis
       script: tox
