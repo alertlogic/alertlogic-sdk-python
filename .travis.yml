@@ -2,7 +2,7 @@ language: python
 jobs:
   include:
     - stage: test
-      python: 3.5
+      python: 3.8
       install: pip install -U tox-travis
       script: tox
     - python: 3.6
@@ -11,11 +11,8 @@ jobs:
     - python: 3.7
       install: pip install -U tox-travis
       script: tox
-    - python: 3.8
-      install: pip install -U tox-travis
-      script: tox
-    - python: 3.8
-      name: 'Test documentation build'
+    - stage: test_doc
+      python: 3.8
       install: pip install -r docs/requirements.txt
       script: cd docs; make html
     - stage: deploy
