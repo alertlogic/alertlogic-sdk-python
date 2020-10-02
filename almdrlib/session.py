@@ -167,6 +167,7 @@ class Session():
                 auth_info = response.json()
                 account_info = auth_info["authentication"]["account"]
                 self._token = auth_info["authentication"]["token"]
+                logger.info(f'Authenticated user {auth_info["authentication"]["user"]["id"]}')
 
             except requests.exceptions.HTTPError as e:
                 raise AuthenticationException(f"invalid http response {e}")
@@ -281,13 +282,19 @@ class Session():
         if self._token is None:
             self._authenticate()
 
-        headers.update({'x-aims-auth-token': self._token})
+        # it's too easy to include the AIMS token when pasting debug logs, so redact it in
+        # the logging statement.
+        headers.update({'x-aims-auth-token': "REDACTED"})
+
         logger.debug(f"Calling '{method}' method. " +
                      f"URL: '{url}'. " +
                      f"Params: '{params}' " +
                      f"Headers: '{headers}' " +
                      f"Cookies: '{cookies}' " +
                      f"Args: '{kwargs}'")
+
+        headers.update({'x-aims-auth-token': self._token})
+
         response = self._session.request(
                 method, url,
                 params=params,

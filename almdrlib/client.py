@@ -634,7 +634,7 @@ class Client(object):
 
     def load_service_spec(self, service_name, version=None, variables=None):
         logger.debug(
-            f"Initializing client for '{self._name}'" +
+            f"Initializing client for '{self._name}' " +
             f"Spec: '{service_name}' Variables: '{variables}'")
         spec = alsdkdefs.load_service_spec(service_name, Config.get_api_dir(), version)
         self.load_spec(spec, variables)
