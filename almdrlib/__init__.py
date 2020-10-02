@@ -36,7 +36,10 @@ def set_logger(name='almdrlib', level=logging.DEBUG, format_string=None):
     handler.setLevel(level)
     formatter = logging.Formatter(format_string)
     handler.setFormatter(formatter)
-    logger.addHandler(handler)
+
+    # avoid duplicate logs if already set by caller, etc.
+    if not logger.handlers:
+        logger.addHandler(handler)
 
 
 def _get_default_session():
