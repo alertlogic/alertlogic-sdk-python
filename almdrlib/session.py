@@ -153,6 +153,7 @@ class Session():
                 self._token = ""
                 self._account_id = ""
                 self._account_name = ""
+                self._user_id = ""
                 return
             logger.info(
                     f"Authenticating '{self._access_key_id}' " +
@@ -167,6 +168,7 @@ class Session():
                 auth_info = response.json()
                 account_info = auth_info["authentication"]["account"]
                 self._token = auth_info["authentication"]["token"]
+                self._user_id = auth_info["authentication"]["user"]["id"]
                 logger.info(f'Authenticated user {auth_info["authentication"]["user"]["id"]}')
 
             except requests.exceptions.HTTPError as e:
@@ -359,3 +361,7 @@ class Session():
     @property
     def token(self):
         return self._token
+
+    @property
+    def user_id(self):
+        return self._user_id
