@@ -799,6 +799,7 @@ def _normalize_schema(name, schema, required=False):
         return schema
 
     if compound_schema:
+        # TODO move to alertlogic-sdk-definitions normalize_node
         if oneof:
             xof = OpenAPIKeyWord.ONE_OF
         elif anyof:
@@ -829,10 +830,11 @@ def _normalize_schema(name, schema, required=False):
             else:
                 return item
 
-        allprops = reduce(lambda acc, s: acc + list(s.get(OpenAPIKeyWord.PROPERTIES).items()), compound_schema, [])
+        allprops = reduce(lambda acc, s: acc + list(s.get(OpenAPIKeyWord.PROPERTIES, OrderedDict()).items()),
+                          compound_schema, [])
         reduced = reduce(reduce_props, allprops, OrderedDict())
         compound_props = OrderedDict(map(add_xof, reduced.items()))
-        properties = compound_props 
+        properties = compound_props
 
     if not properties:
         properties = OrderedDict({

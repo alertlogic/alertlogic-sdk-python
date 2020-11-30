@@ -16,6 +16,35 @@ servers:
     description: integration
     x-alertlogic-session-endpoint: true
 paths:
+  '/testapi/v1/postdata':
+    post:
+      operationId: post_data_compound
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  properties:
+                    prop:
+                      type: string
+                  additionalProperties: true
+                - type: object
+                  properties:
+                    prop:
+                      type: integer
+                - type: string
+      responses:
+        '200':
+          description: 200 resp
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  prop:
+                    type: string
+
   '/testapi/v1/{account_id}/test_get_data':
     get:
       summary: Test Get Data Operation
