@@ -25,6 +25,7 @@ requirements = [
         'pyyaml==5.1.2',
         'jsonschema[format_nongpl]==3.2.0',
         'm2r==0.2.1',
+        'boto3>=1.16.57',
         definitions_dependency
     ]
 

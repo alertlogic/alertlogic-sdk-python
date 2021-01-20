@@ -6,6 +6,7 @@ import logging
 import json
 import almdrlib.constants
 from almdrlib.exceptions import AlmdrlibValueError
+from almdrlib.environment import AlEnv
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,7 @@ class Config():
     ALERTLOGIC_ACCOUNT_ID - Account Id to perform operations against.
     ALERTLOGIC_RESIDENCY - Data Residency when creating new deployments
     ALERTLOGIC_API  - Directory where OpenAPI yaml files reside
+    ALERTLOGIC_SERVICE_NAME - If a (micro)service is built around almdrlib used as identifier
 
     Config File section values
     access_key_id - User's AIMS Access Key ID
@@ -51,9 +53,12 @@ class Config():
                  profile=None,
                  global_endpoint=None,
                  endpoint_map_file=None,
-                 residency=None):
+                 residency=None,
+                 service_name=None):
         self._config_file = os.environ.get('ALERTLOGIC_CONFIG')
         self._endpoint_map = None
+        self._service_name = service_name
+
         if self._config_file is None:
             self._config_file = almdrlib.constants.DEFAULT_CONFIG_FILE
 
@@ -88,16 +93,33 @@ class Config():
             os.environ.get('ALERTLOGIC_PROFILE') or \
             almdrlib.constants.DEFAULT_PROFILE
 
+        self._service_name = \
+            service_name or \
+            os.environ.get('ALERTLOGIC_SERVICE_NAME') or \
+            almdrlib.constants.DEFAULT_SERVICE_NAME
+
         self._parser = configparser.ConfigParser()
         if self._read_config_file():
             self._initialize_config()
         else:
             self._initialize_defaults()
 
+        self._init_al_env_credentials(service_name)
+
         logger.debug("Finished configuraiton initialization. " +
                      f"access_key_id={self._access_key_id}, " +
                      f"account_id={self._account_id}, " +
                      f"global_endpoint={self._global_endpoint}")
+
+    def _init_al_env_credentials(self, service_name):
+        try:
+            if self._access_key_id is None or self._secret_key is None:
+                service_name_key = f"{service_name}.aims_authc",
+                env = AlEnv(service_name_key)
+                self._access_key_id = env.get('access_key_id')
+                self._secret_key = env.get('secret_access_key')
+        except Exception as e:
+            logger.debug(f"Did not initialise aims credentials for {service_name} because {e}")
 
     def _read_config_file(self):
         try:
@@ -118,9 +140,7 @@ class Config():
 
     def _initialize_config(self):
         if self._access_key_id is None or self._secret_key is None:
-            self._access_key_id = self._get_config_option(
-                                        'access_key_id',
-                                        None)
+            self._access_key_id = self._get_config_option('access_key_id', None)
             self._secret_key = self._get_config_option('secret_key', None)
 
         self._global_endpoint = \
