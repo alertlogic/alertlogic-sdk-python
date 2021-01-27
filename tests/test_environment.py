@@ -6,6 +6,7 @@ import boto3
 
 
 class MockDDBTable:
+    creation_date_time = '2005-08-09T18:31:42-03:30'
     def __init__(self, tablename):
         pass
 
