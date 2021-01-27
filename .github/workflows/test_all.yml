@@ -32,4 +32,3 @@ jobs:
       run: |
         echo "$GITHUB_REF"
         python3 -m unittest
-        python3 scripts/validate_my_definition.py -d alsdkdefs/apis/assets_query/
