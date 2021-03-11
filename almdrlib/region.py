@@ -12,7 +12,8 @@ List of known regions
 """
 ENDPOINTS = {
     "production": "https://api.global-services.global.alertlogic.com",
-    "integration": "https://api.global-integration.product.dev.alertlogic.com"
+    "integration": "https://api.global-integration.product.dev.alertlogic.com",
+    "aesolo": "http://api.aesolo.com"
 }
 
 

@@ -250,6 +250,8 @@ class Session():
         return _client
 
     def get_url(self, service_name, account_id=None):
+        if self._global_endpoint == 'aesolo': # Does not support residency
+            return self._global_endpoint_url
         if self._global_endpoint == "map":
             return self.get_mapped_url(service_name, account_id)
         try:
