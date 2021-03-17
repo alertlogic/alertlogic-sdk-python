@@ -12,6 +12,7 @@ import logging
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
+import re
 
 from almdrlib.config import Config
 from almdrlib.region import Region
@@ -120,8 +121,7 @@ class Session():
         self._residency = self._config.residency
         self._global_endpoint = self._config.global_endpoint
         self._endpoint_map = self._config.endpoint_map
-        self._global_endpoint_url = Region.get_global_endpoint(
-                                                        self._global_endpoint)
+        self._global_endpoint_url = Region.get_global_endpoint(self._global_endpoint)
         self._raise_for_status = kwargs.get('raise_for_status')
 
         if aims_token:
@@ -252,6 +252,8 @@ class Session():
     def get_url(self, service_name, account_id=None):
         if self._global_endpoint == "map":
             return self.get_mapped_url(service_name, account_id)
+        elif re.match(r'^(http|https)://.*$', self._global_endpoint):
+            return self._global_endpoint
         try:
             response = self.request(
                 'get',

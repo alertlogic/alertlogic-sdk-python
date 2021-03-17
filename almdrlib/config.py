@@ -28,7 +28,7 @@ class Config():
     If not specified [default] section is used
     ALERTLOGIC_ACCESS_KEY_ID - Access Key Id
     ALERTLOGIC_SECRET_KEY - Secret Key
-    ALERTLOGIC_ENDPOINT - production, integration, or map are supported values
+    ALERTLOGIC_ENDPOINT - endpoint id: production | integration, a map, or a url are the supported values
     ALERTLOGIC_ENDPOINT_MAP - (full or relative to config directory) path of a json file mapping services to endpoints
     ALERTLOGIC_ACCOUNT_ID - Account Id to perform operations against.
     ALERTLOGIC_RESIDENCY - Data Residency when creating new deployments
