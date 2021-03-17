@@ -112,8 +112,12 @@ Alternatively `global_endpoint` configuration option or `ALERTLOGIC_ENDPOINT` va
 access_key_id=skip
 secret_key=skip
 global_endpoint=http://api.aesolo.com
+...
+global_endpoint=http://api.aesolo.com:3001
 ```
 
 ```
 export ALERTLOGIC_ENDPOINT="http://api.aesolo.com"
+...
+export ALERTLOGIC_ENDPOINT="http://api.aesolo.com:3001"
 ```
