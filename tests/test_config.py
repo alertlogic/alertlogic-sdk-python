@@ -7,7 +7,6 @@ MOCK_AUTH = {
         "user": {
             "id": "589B64BB-AE91-4FA9-A6D8-37AC6759BB5D",
             "account_id": "2",
-            "name": "Anton Benkevich",
             "created": {
                 "at": 1443713420,
                 "by": "693BA145-78C0-4C77-AC1A-5385461839CD"
