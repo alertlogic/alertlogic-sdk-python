@@ -105,3 +105,19 @@ endpoint_map_file=aesolo.json
   "ingest" : "http://127.0.0.1:9000"
 }
 ```
+
+Alternatively `global_endpoint` configuration option or `ALERTLOGIC_ENDPOINT` value might be set to the url value:
+```
+[aesolo]
+access_key_id=skip
+secret_key=skip
+global_endpoint=http://api.aesolo.com
+...
+global_endpoint=http://api.aesolo.com:3001
+```
+
+```
+export ALERTLOGIC_ENDPOINT="http://api.aesolo.com"
+...
+export ALERTLOGIC_ENDPOINT="http://api.aesolo.com:3001"
+```
