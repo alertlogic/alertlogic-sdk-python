@@ -783,6 +783,10 @@ class Client(object):
             f"'{type(self).__name__}' object has no attribute '{op_name}'"
         )
 
+    def __dir__(self):
+        # Add in operation names
+        return super().__dir__() + list(self._operations.keys())
+
 
 def _normalize_schema(name, schema, required=False):
     properties = schema.get(OpenAPIKeyWord.PROPERTIES)
