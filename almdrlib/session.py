@@ -5,8 +5,6 @@
     ~~~~~~~~~~~~~~~~
     almdrlib authentication/authorization
 """
-import types
-import os
 import logging
 
 import requests
@@ -218,7 +216,6 @@ class Session():
 
         # Create Service's module
         module_name = service_name.capitalize()
-        types.ModuleType = module_name
         class_name = "Client"
 
         #
