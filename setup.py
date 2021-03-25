@@ -22,7 +22,7 @@ except:
 requirements = [
         'requests>=2.18',
         'configparser>=4.0.2',
-        'pyyaml==5.1.2',
+        'pyyaml==5.4',
         'jsonschema[format_nongpl]==3.2.0',
         'm2r==0.2.1',
         'boto3>=1.16.57',
