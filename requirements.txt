@@ -2,7 +2,7 @@ setuptools>=42
 pip>=19.0.3
 requests==2.22.0
 configparser==4.0.2
-pyyaml==5.1.2
+pyyaml==5.4
 jsonschema[format_nongpl]==3.2.0
 git+https://github.com/crossnox/m2r@dev#egg=m2r
 boto3>=1.16.57
