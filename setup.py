@@ -1,10 +1,36 @@
-import re
+import os
 import json
 from urllib import request
 from setuptools import setup, find_packages
 
-with open('HISTORY.rst') as history_file:
-    history = history_file.read()
+def aggregate_release(lns, acc):
+    cut = lns[0:3]
+    rest = lns[4:]
+    if not lns:
+        return acc
+    tag = cut[0].strip()
+    date = cut[1].strip()
+    subject = cut[2].strip()
+    rel_acc = acc.get(tag, [])
+    rel_acc.append(f"* {date} - {subject}")
+    acc[tag] = rel_acc
+    return aggregate_release(rest, acc)
+
+
+with os.popen('git --no-pager log --tags --pretty="%S%n%aD%n%s%n"') as stream:
+    lines = stream.readlines()
+    aggregated = aggregate_release(lines, {})
+    res = []
+    for rel, changes in aggregated.items():
+        ch = '\n'.join(changes)
+        res.append(f"###{rel}\n\n{ch}\n")
+    hist = "\n".join(res)
+    history_header = \
+'''
+## History
+
+'''
+    history = history_header + hist
 
 with open('README.md') as readme_file:
     readme = readme_file.read()
