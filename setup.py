@@ -23,7 +23,7 @@ with os.popen('git --no-pager log --tags --pretty="%S%n%aD%n%s%n"') as stream:
     res = []
     for rel, changes in aggregated.items():
         ch = '\n'.join(changes)
-        res.append(f"###{rel}\n\n{ch}\n")
+        res.append(f"### {rel}\n\n{ch}\n")
     hist = "\n".join(res)
     history_header = \
 '''
