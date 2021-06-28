@@ -43,10 +43,13 @@ class Server(object):
 
         if spec.get(OpenAPIKeyWord.X_ALERTLOGIC_SESSION_ENDPOINT) and \
                 self._session:
-            self._url = self._session.get_url(self._service_name)
+            self.update_url()
 
         logger.debug(f"Server initialized using '{self._url}' URL " +
                      f"for '{self._service_name}' service.")
+
+    def update_url(self, account_id=None):
+        self._url = self._session.get_url(self._service_name, account_id)
 
     @property
     def url(self):
@@ -577,6 +580,10 @@ class Operation(object):
             params = {}
             headers = {}
             cookies = {}
+            account_id = kwargs.get('account_id')
+
+            if account_id:
+                self._server.update_url(account_id)
 
             logger.debug(
                     f"{self.operation_id} called " +
