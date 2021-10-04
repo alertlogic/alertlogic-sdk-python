@@ -158,7 +158,7 @@ class RequestBodySimpleParameter(RequestBodyParameter):
 
     def serialize(self, kwargs, header=None):
         data = kwargs.pop(self.name, "")
-        if self._format == 'binary':
+        if self._format == 'binary' and not isinstance(data, bytes):
             kwargs['data'] = data.encode()
         else:
             kwargs['data'] = data
