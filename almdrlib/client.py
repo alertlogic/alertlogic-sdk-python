@@ -244,7 +244,20 @@ class RequestBody(object):
         self._session = session
         self._content_types = {}
         self._content = {}
-        self._default_content_type = None
+        self._default_content_type = False
+
+    @property
+    def default_content_type(self):
+        if self._default_content_type is False:
+            if len(self._content) == 1:
+                self._default_content_type = next(iter(self._content))
+            else:
+                self._default_content_type = None
+        return self._default_content_type
+
+    @property
+    def parameters(self):
+        return self._parameters
 
     def add_content(self, content_type, schema, al_schema):
         if not schema:
@@ -288,20 +301,20 @@ class RequestBody(object):
         #
         if OpenAPIKeyWord.CONTENT_TYPE_PARAM in headers:
             content_type = headers[OpenAPIKeyWord.CONTENT_TYPE_PARAM]
-            payloadBodyParam = self._content[content_type]
-        elif len(self._content) == 1:
-            content_type, payloadBodyParam = next(iter(self._content.items()))
-            headers[OpenAPIKeyWord.CONTENT_TYPE_PARAM] = content_type
+            payload_body_param = self._content[content_type]
+        elif self.default_content_type:
+            payload_body_param = self._content[self.default_content_type]
+            headers[OpenAPIKeyWord.CONTENT_TYPE_PARAM] = self.default_content_type
         else:
             raise AlmdrlibValueError(
                 f"'{OpenAPIKeyWord.CONTENT_TYPE_PYTHON_PARAM}'" +
                 "parameter is required.")
 
-        payloadBodyParam.serialize(kwargs, headers)
+        payload_body_param.serialize(kwargs, headers)
 
     def get_schema(self):
-        if len(self._content) == 1:
-            payloadBodyParam = next(iter(self._content.values()))
+        if self.default_content_type:
+            payloadBodyParam = self._content[self.default_content_type]
             return {OpenAPIKeyWord.PROPERTIES: payloadBodyParam.schema}
 
         # Request body supports has multiple content types
@@ -683,7 +696,30 @@ class Operation(object):
     def signature(self):
         """Generate the signature for this Operation."""
         if self.__sig__ is None:
-            params = [p.to_inspect_parameter() for p in sorted(self._params)]
+            required_params = []
+            body_params = []
+            non_required_params = []
+            # Define the path, query, header, and cookie parameters
+            for p in self._params:
+                if p.required:
+                    required_params.append(p.to_inspect_parameter())
+                else:
+                    non_required_params.append(p.to_inspect_parameter())
+            # Define the body parameter, if it exists
+            if self.body is not None:
+                # Define the content type parameter if there's more than one
+                if not self.body.default_content_type:
+                    param = inspect.Parameter(
+                        OpenAPIKeyWord.CONTENT_TYPE_PYTHON_PARAM,
+                        inspect.Parameter.KEYWORD_ONLY)
+                    body_params.append(param)
+                # Define each possible body parameter.  Note that these may be
+                # mutually exclusive.
+                for body_param in self.body.parameters.keys():
+                    param = inspect.Parameter(body_param,
+                                              inspect.Parameter.KEYWORD_ONLY)
+                    body_params.append(param)
+            params = required_params + body_params + non_required_params
             self.__sig__ = inspect.Signature(params)
         return self.__sig__
 
@@ -845,7 +881,7 @@ class Client(object):
                 )
 
     def _initalize_request_body(self, body_spec=None):
-        ''' Initilize request body content & parameters'''
+        ''' Initialize request body content & parameters'''
         if not body_spec:
             return None
 
