@@ -497,6 +497,9 @@ class PathParameter(object):
         kwargs = {}
         if self.default is not None:
             kwargs['default'] = self.default
+        annotation = openapi_type_to_python_data_type(self.datatype)
+        if annotation:
+            kwargs['annotation'] = annotation
         return inspect.Parameter(self._name, inspect.Parameter.KEYWORD_ONLY,
                                  **kwargs)
 
@@ -954,3 +957,14 @@ def serialize_value(datatype, value):
         return value and "true" or "false"
     else:
         return str(value)
+
+
+def openapi_type_to_python_data_type(data_type):
+    type_map = {
+        OpenAPIKeyWord.STRING: str,
+        OpenAPIKeyWord.BOOLEAN: bool,
+        OpenAPIKeyWord.INTEGER: int,
+        OpenAPIKeyWord.OBJECT: dict,
+        OpenAPIKeyWord.ARRAY: list
+    }
+    return type_map.get(data_type)
