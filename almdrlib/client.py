@@ -7,8 +7,8 @@
 """
 
 import abc
-# import typing
-# import inspect
+import functools
+import inspect
 import logging
 import json
 import jsonschema
@@ -330,6 +330,7 @@ class RequestBody(object):
                 for property in content.values() if property.required]
 
 
+@functools.total_ordering
 class PathParameter(object):
     def __init__(self, spec={}, session=None):
         # TODO: Rework PathParameter to work based on the saved spec
@@ -363,7 +364,7 @@ class PathParameter(object):
 
     @property
     def required(self):
-        return self._required
+        return self._required or self._in == OpenAPIKeyWord.PATH
 
     @property
     def description(self):
@@ -478,6 +479,58 @@ class PathParameter(object):
         else:
             return {name: value}
 
+    def to_inspect_parameter(self):
+        """Convert this into an inspect.Parameter."""
+        kwargs = {}
+        if self.default is not None:
+            kwargs['default'] = self.default
+        return inspect.Parameter(self._name, inspect.Parameter.KEYWORD_ONLY,
+                                 **kwargs)
+
+    def __lt__(self, other):
+        """
+        Define less-than for functools.total_ordering.
+
+        Required parameters are always ordered before non-required parameters.
+        Next come parameters without defaults.  Next, the location is
+        considered: in the path, then the query, then headers, then cookies.
+        Finally, the name of the parameter is used to compare otherwise
+        equally-ranked parameters.
+
+        This is intended to order parameters in terms of most important to
+        specify (required, no default, in the URL) to least important
+        (optional, with a default, in a less-used HTTP field).
+        """
+        location_ranks = {
+            OpenAPIKeyWord.PATH: 0,
+            OpenAPIKeyWord.QUERY: 1,
+            OpenAPIKeyWord.HEADER: 2,
+            OpenAPIKeyWord.COOKIE: 3
+        }
+        if type(self) != type(other):
+            return hash(self) < hash(other)
+        if self.required and not other.required:
+            return True
+        if self.default is None and other.default is not None:
+            return True
+        if location_ranks.get(self._in) < location_ranks.get(other._in):
+            return True
+        return self.name < other.name
+
+    def __eq__(self, other):
+        """
+        Compare PathParameters for equality.
+
+        All fields except for _session and _default are derived from spec, so
+        simply compare the specs, then those two fields.
+        """
+        if type(self) != type(other):
+            return False
+
+        return self._spec == other._spec \
+            and self._session == other._session \
+            and self._default == other._default
+
 
 class Operation(object):
     _internal_param_prefix = "_"
@@ -491,6 +544,7 @@ class Operation(object):
                  method, spec,
                  body,
                  response,
+                 client,
                  session=None,
                  server=None):
         self._path = path
@@ -504,6 +558,10 @@ class Operation(object):
         self._session = session
         self._server = server
         self._operation_id = self._spec[OpenAPIKeyWord.OPERATION_ID]
+        self._client = client
+        self.__name__ = self._operation_id
+        self.__sig__ = None
+        self.__doc__ = self._make_doc()
 
         logger.debug(f"Initilized {self._operation_id} operation.")
 
@@ -619,7 +677,27 @@ class Operation(object):
         return self._call(*args, **kwargs)
 
     def __repr__(self):
-        return f"<{type(self).__name__}: [{self._method}] {self._path}>"
+        return f"<{self._client.name}.{self.operation_id}: " \
+               f"{self._method.upper()} {self._path}>"
+
+    def signature(self):
+        """Generate the signature for this Operation."""
+        if self.__sig__ is None:
+            params = [p.to_inspect_parameter() for p in sorted(self._params)]
+            self.__sig__ = inspect.Signature(params)
+        return self.__sig__
+
+    def _make_doc(self):
+        """Generate the __doc__ string for this Operation."""
+        required_param_names = [f'* {p.name}' for p in sorted(self._params)
+                                if p.required and p.default is None]
+        if required_param_names:
+            rp = 'Required parameters:\n' + '\n'.join(required_param_names) + \
+                 '\n\n'
+        else:
+            rp = ''
+        return f'{self._operation_id}{self.signature()}\n\n{rp}' + \
+               self.description
 
 
 class Client(object):
@@ -643,7 +721,8 @@ class Client(object):
         logger.debug(
             f"Initializing client for '{self._name}' " +
             f"Spec: '{service_name}' Variables: '{variables}'")
-        spec = alsdkdefs.load_service_spec(service_name, Config.get_api_dir(), version)
+        spec = alsdkdefs.load_service_spec(service_name, Config.get_api_dir(),
+                                           version)
         self.load_spec(spec, variables)
 
     @property
@@ -760,6 +839,7 @@ class Client(object):
                     op_spec,
                     body,
                     response,
+                    self,
                     session=self._session,
                     server=self._server
                 )
