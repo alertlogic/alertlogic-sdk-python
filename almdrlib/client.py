@@ -303,8 +303,9 @@ class RequestBody(object):
             content_type = headers[OpenAPIKeyWord.CONTENT_TYPE_PARAM]
             payload_body_param = self._content[content_type]
         elif self.default_content_type:
-            payload_body_param = self._content[self.default_content_type]
-            headers[OpenAPIKeyWord.CONTENT_TYPE_PARAM] = self.default_content_type
+            ct = self.default_content_type
+            payload_body_param = self._content[ct]
+            headers[OpenAPIKeyWord.CONTENT_TYPE_PARAM] = ct
         else:
             raise AlmdrlibValueError(
                 f"'{OpenAPIKeyWord.CONTENT_TYPE_PYTHON_PARAM}'" +
