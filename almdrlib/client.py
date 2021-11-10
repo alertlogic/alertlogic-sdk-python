@@ -495,14 +495,13 @@ class PathParameter(object):
 
     def to_inspect_parameter(self):
         """Convert this into an inspect.Parameter."""
-        kwargs = {}
-        if self.default is not None:
-            kwargs['default'] = self.default
         annotation = openapi_type_to_python_data_type(self.datatype)
-        if annotation:
-            kwargs['annotation'] = annotation
-        return inspect.Parameter(self._name, inspect.Parameter.KEYWORD_ONLY,
-                                 **kwargs)
+        return inspect.Parameter(
+            self._name,
+            inspect.Parameter.KEYWORD_ONLY,
+            default=self.default or inspect.Parameter.empty,
+            annotation=annotation or inspect.Parameter.empty
+        )
 
     def __lt__(self, other):
         """
@@ -700,33 +699,7 @@ class Operation(object):
     @property
     def __signature__(self):
         if self._signature is None:
-            required_params = []
-            body_params = []
-            non_required_params = []
-            # Define the path, query, header, and cookie parameters
-            for p in self._params:
-                if p.required:
-                    required_params.append(p.to_inspect_parameter())
-                else:
-                    non_required_params.append(p.to_inspect_parameter())
-            # Define the body parameter, if it exists
-            if self.body is not None:
-                # Define the content type parameter if there's more than one
-                ct_present = OpenAPIKeyWord.CONTENT_TYPE_PYTHON_PARAM in \
-                             [p.name for p in self._params]
-                if not self.body.default_content_type and not ct_present:
-                    param = inspect.Parameter(
-                        OpenAPIKeyWord.CONTENT_TYPE_PYTHON_PARAM,
-                        inspect.Parameter.KEYWORD_ONLY)
-                    body_params.append(param)
-                # Define each possible body parameter.  Note that these may be
-                # mutually exclusive.
-                for body_param in self.body.parameters.keys():
-                    param = inspect.Parameter(body_param,
-                                              inspect.Parameter.KEYWORD_ONLY)
-                    body_params.append(param)
-            params = required_params + body_params + non_required_params
-            self._signature = inspect.Signature(params)
+            self._signature = self._make_signature()
         return self._signature
 
     @property
@@ -742,6 +715,40 @@ class Operation(object):
                 rp = ''
             return f'{self._operation_id}{self.__signature__}\n\n{rp}' + \
                    self.description
+
+    def _make_signature(self):
+        required_params = []
+        body_params = []
+        non_required_params = []
+        # Define the path, query, header, and cookie parameters
+        for p in self._params:
+            if p.required:
+                required_params.append(p.to_inspect_parameter())
+            else:
+                non_required_params.append(p.to_inspect_parameter())
+        # Define the body parameter, if it exists
+        if self.body is not None:
+            # Define the content_type parameter if there's more than one
+            ct_present = OpenAPIKeyWord.CONTENT_TYPE_PYTHON_PARAM in \
+                         [p.name for p in self._params]
+            if not ct_present:
+                default = self.body.default_content_type or \
+                          inspect.Parameter.empty
+                body_params.append(inspect.Parameter(
+                    OpenAPIKeyWord.CONTENT_TYPE_PYTHON_PARAM,
+                    inspect.Parameter.KEYWORD_ONLY,
+                    annotation=str,
+                    default=default)
+                )
+            # Define each possible body parameter.  Note that these may be
+            # mutually exclusive.
+            for body_param in self.body.parameters.keys():
+                param = inspect.Parameter(
+                    body_param,
+                    inspect.Parameter.KEYWORD_ONLY)
+                body_params.append(param)
+        params = required_params + body_params + non_required_params
+        return inspect.Signature(params)
 
 
 class Client(object):
