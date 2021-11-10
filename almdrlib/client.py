@@ -712,7 +712,9 @@ class Operation(object):
             # Define the body parameter, if it exists
             if self.body is not None:
                 # Define the content type parameter if there's more than one
-                if not self.body.default_content_type:
+                ct_present = OpenAPIKeyWord.CONTENT_TYPE_PYTHON_PARAM in \
+                             [p.name for p in self._params]
+                if not self.body.default_content_type and not ct_present:
                     param = inspect.Parameter(
                         OpenAPIKeyWord.CONTENT_TYPE_PYTHON_PARAM,
                         inspect.Parameter.KEYWORD_ONLY)
