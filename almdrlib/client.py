@@ -721,7 +721,7 @@ class Operation(object):
         body_params = []
         non_required_params = []
         # Define the path, query, header, and cookie parameters
-        for p in self._params:
+        for p in sorted(self._params):
             if p.required:
                 required_params.append(p.to_inspect_parameter())
             else:
