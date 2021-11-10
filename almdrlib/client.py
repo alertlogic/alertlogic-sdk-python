@@ -576,8 +576,8 @@ class Operation(object):
         self._operation_id = self._spec[OpenAPIKeyWord.OPERATION_ID]
         self._client = client
         self.__name__ = self._operation_id
-        self.__sig__ = None
-        self.__doc__ = self._make_doc()
+        self._signature = None
+        self._doc = None
 
         logger.debug(f"Initilized {self._operation_id} operation.")
 
@@ -696,9 +696,9 @@ class Operation(object):
         return f"<{self._client.name}.{self.operation_id}: " \
                f"{self._method.upper()} {self._path}>"
 
-    def signature(self):
-        """Generate the signature for this Operation."""
-        if self.__sig__ is None:
+    @property
+    def __signature__(self):
+        if self._signature is None:
             required_params = []
             body_params = []
             non_required_params = []
@@ -723,20 +723,22 @@ class Operation(object):
                                               inspect.Parameter.KEYWORD_ONLY)
                     body_params.append(param)
             params = required_params + body_params + non_required_params
-            self.__sig__ = inspect.Signature(params)
-        return self.__sig__
+            self._signature = inspect.Signature(params)
+        return self._signature
 
-    def _make_doc(self):
+    @property
+    def __doc__(self):
         """Generate the __doc__ string for this Operation."""
-        required_param_names = [f'* {p.name}' for p in sorted(self._params)
-                                if p.required and p.default is None]
-        if required_param_names:
-            rp = 'Required parameters:\n' + '\n'.join(required_param_names) + \
-                 '\n\n'
-        else:
-            rp = ''
-        return f'{self._operation_id}{self.signature()}\n\n{rp}' + \
-               self.description
+        if self._doc is None:
+            required_param_names = [f'* {p.name}' for p in sorted(self._params)
+                                    if p.required and p.default is None]
+            if required_param_names:
+                rp = '\n'.join(['Required parameters:'] + required_param_names)
+                rp += '\n\n'
+            else:
+                rp = ''
+            return f'{self._operation_id}{self.__signature__}\n\n{rp}' + \
+                   self.description
 
 
 class Client(object):
