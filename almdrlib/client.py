@@ -124,7 +124,7 @@ class RequestBodyParameter(object):
             self._validator.validate(data)
         except jsonschema.exceptions.ValidationError as e:
             raise AlmdrlibValueError(
-                    f"{e.message}. Schema: {json.dumps(e.schema)}")
+                    f"Validation error: {e.message}.\nSchema:\n{json.dumps(e.schema, indent=2)}")
 
     @property
     def name(self):
