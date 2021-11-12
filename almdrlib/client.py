@@ -7,8 +7,8 @@
 """
 
 import abc
-# import typing
-# import inspect
+import functools
+import inspect
 import logging
 import json
 import jsonschema
@@ -244,7 +244,20 @@ class RequestBody(object):
         self._session = session
         self._content_types = {}
         self._content = {}
-        self._default_content_type = None
+        self._default_content_type = False
+
+    @property
+    def default_content_type(self):
+        if self._default_content_type is False:
+            if len(self._content) == 1:
+                self._default_content_type = next(iter(self._content))
+            else:
+                self._default_content_type = None
+        return self._default_content_type
+
+    @property
+    def parameters(self):
+        return self._parameters
 
     def add_content(self, content_type, schema, al_schema):
         if not schema:
@@ -288,20 +301,21 @@ class RequestBody(object):
         #
         if OpenAPIKeyWord.CONTENT_TYPE_PARAM in headers:
             content_type = headers[OpenAPIKeyWord.CONTENT_TYPE_PARAM]
-            payloadBodyParam = self._content[content_type]
-        elif len(self._content) == 1:
-            content_type, payloadBodyParam = next(iter(self._content.items()))
-            headers[OpenAPIKeyWord.CONTENT_TYPE_PARAM] = content_type
+            payload_body_param = self._content[content_type]
+        elif self.default_content_type:
+            ct = self.default_content_type
+            payload_body_param = self._content[ct]
+            headers[OpenAPIKeyWord.CONTENT_TYPE_PARAM] = ct
         else:
             raise AlmdrlibValueError(
                 f"'{OpenAPIKeyWord.CONTENT_TYPE_PYTHON_PARAM}'" +
                 "parameter is required.")
 
-        payloadBodyParam.serialize(kwargs, headers)
+        payload_body_param.serialize(kwargs, headers)
 
     def get_schema(self):
-        if len(self._content) == 1:
-            payloadBodyParam = next(iter(self._content.values()))
+        if self.default_content_type:
+            payloadBodyParam = self._content[self.default_content_type]
             return {OpenAPIKeyWord.PROPERTIES: payloadBodyParam.schema}
 
         # Request body supports has multiple content types
@@ -330,6 +344,7 @@ class RequestBody(object):
                 for property in content.values() if property.required]
 
 
+@functools.total_ordering
 class PathParameter(object):
     def __init__(self, spec={}, session=None):
         # TODO: Rework PathParameter to work based on the saved spec
@@ -363,7 +378,7 @@ class PathParameter(object):
 
     @property
     def required(self):
-        return self._required
+        return self._required or self._in == OpenAPIKeyWord.PATH
 
     @property
     def description(self):
@@ -478,6 +493,60 @@ class PathParameter(object):
         else:
             return {name: value}
 
+    def to_inspect_parameter(self):
+        """Convert this into an inspect.Parameter."""
+        annotation = openapi_type_to_python_data_type(self.datatype)
+        return inspect.Parameter(
+            self._name,
+            inspect.Parameter.KEYWORD_ONLY,
+            default=self.default or inspect.Parameter.empty,
+            annotation=annotation or inspect.Parameter.empty
+        )
+
+    def __lt__(self, other):
+        """
+        Define less-than for functools.total_ordering.
+
+        Required parameters are always ordered before non-required parameters.
+        Next come parameters without defaults.  Next, the location is
+        considered: in the path, then the query, then headers, then cookies.
+        Finally, the name of the parameter is used to compare otherwise
+        equally-ranked parameters.
+
+        This is intended to order parameters in terms of most important to
+        specify (required, no default, in the URL) to least important
+        (optional, with a default, in a less-used HTTP field).
+        """
+        location_ranks = {
+            OpenAPIKeyWord.PATH: 0,
+            OpenAPIKeyWord.QUERY: 1,
+            OpenAPIKeyWord.HEADER: 2,
+            OpenAPIKeyWord.COOKIE: 3
+        }
+        if type(self) != type(other):
+            return hash(self) < hash(other)
+        if self.required and not other.required:
+            return True
+        if self.default is None and other.default is not None:
+            return True
+        if location_ranks.get(self._in) < location_ranks.get(other._in):
+            return True
+        return self.name < other.name
+
+    def __eq__(self, other):
+        """
+        Compare PathParameters for equality.
+
+        All fields except for _session and _default are derived from spec, so
+        simply compare the specs, then those two fields.
+        """
+        if type(self) != type(other):
+            return False
+
+        return self._spec == other._spec \
+            and self._session == other._session \
+            and self._default == other._default
+
 
 class Operation(object):
     _internal_param_prefix = "_"
@@ -491,6 +560,7 @@ class Operation(object):
                  method, spec,
                  body,
                  response,
+                 client,
                  session=None,
                  server=None):
         self._path = path
@@ -504,6 +574,10 @@ class Operation(object):
         self._session = session
         self._server = server
         self._operation_id = self._spec[OpenAPIKeyWord.OPERATION_ID]
+        self._client = client
+        self.__name__ = self._operation_id
+        self._signature = None
+        self._doc = None
 
         logger.debug(f"Initilized {self._operation_id} operation.")
 
@@ -619,7 +693,62 @@ class Operation(object):
         return self._call(*args, **kwargs)
 
     def __repr__(self):
-        return f"<{type(self).__name__}: [{self._method}] {self._path}>"
+        return f"<{self._client.name}.{self.operation_id}: " \
+               f"{self._method.upper()} {self._path}>"
+
+    @property
+    def __signature__(self):
+        if self._signature is None:
+            self._signature = self._make_signature()
+        return self._signature
+
+    @property
+    def __doc__(self):
+        """Generate the __doc__ string for this Operation."""
+        if self._doc is None:
+            required_param_names = [f'* {p.name}' for p in sorted(self._params)
+                                    if p.required and p.default is None]
+            if required_param_names:
+                rp = '\n'.join(['Required parameters:'] + required_param_names)
+                rp += '\n\n'
+            else:
+                rp = ''
+            return f'{self._operation_id}{self.__signature__}\n\n{rp}' + \
+                   self.description
+
+    def _make_signature(self):
+        required_params = []
+        body_params = []
+        non_required_params = []
+        # Define the path, query, header, and cookie parameters
+        for p in sorted(self._params):
+            if p.required:
+                required_params.append(p.to_inspect_parameter())
+            else:
+                non_required_params.append(p.to_inspect_parameter())
+        # Define the body parameter, if it exists
+        if self.body is not None:
+            # Define the content_type parameter if there's more than one
+            ct_present = OpenAPIKeyWord.CONTENT_TYPE_PYTHON_PARAM in \
+                         [p.name for p in self._params]
+            if not ct_present:
+                default = self.body.default_content_type or \
+                          inspect.Parameter.empty
+                body_params.append(inspect.Parameter(
+                    OpenAPIKeyWord.CONTENT_TYPE_PYTHON_PARAM,
+                    inspect.Parameter.KEYWORD_ONLY,
+                    annotation=str,
+                    default=default)
+                )
+            # Define each possible body parameter.  Note that these may be
+            # mutually exclusive.
+            for body_param in self.body.parameters.keys():
+                param = inspect.Parameter(
+                    body_param,
+                    inspect.Parameter.KEYWORD_ONLY)
+                body_params.append(param)
+        params = required_params + body_params + non_required_params
+        return inspect.Signature(params)
 
 
 class Client(object):
@@ -643,7 +772,8 @@ class Client(object):
         logger.debug(
             f"Initializing client for '{self._name}' " +
             f"Spec: '{service_name}' Variables: '{variables}'")
-        spec = alsdkdefs.load_service_spec(service_name, Config.get_api_dir(), version)
+        spec = alsdkdefs.load_service_spec(service_name, Config.get_api_dir(),
+                                           version)
         self.load_spec(spec, variables)
 
     @property
@@ -760,12 +890,13 @@ class Client(object):
                     op_spec,
                     body,
                     response,
+                    self,
                     session=self._session,
                     server=self._server
                 )
 
     def _initalize_request_body(self, body_spec=None):
-        ''' Initilize request body content & parameters'''
+        ''' Initialize request body content & parameters'''
         if not body_spec:
             return None
 
@@ -838,3 +969,14 @@ def serialize_value(datatype, value):
         return value and "true" or "false"
     else:
         return str(value)
+
+
+def openapi_type_to_python_data_type(data_type):
+    type_map = {
+        OpenAPIKeyWord.STRING: str,
+        OpenAPIKeyWord.BOOLEAN: bool,
+        OpenAPIKeyWord.INTEGER: int,
+        OpenAPIKeyWord.OBJECT: dict,
+        OpenAPIKeyWord.ARRAY: list
+    }
+    return type_map.get(data_type)
