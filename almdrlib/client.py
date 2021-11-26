@@ -124,8 +124,7 @@ class RequestBodyParameter(object):
             self._validator.validate(data)
         except jsonschema.exceptions.ValidationError as e:
             logger.debug(f"Validation error: {e.message}.\nSchema:\n{json.dumps(e.schema, indent=2)}")
-            raise AlmdrlibValueError(
-                    f"Validation error: {e.message}")
+            raise AlmdrlibValueError(f"Validation Error: {e.message}") from None
 
     @property
     def name(self):
@@ -691,7 +690,10 @@ class Operation(object):
     def __call__(self, *args, **kwargs):
         if not self._call:
             self._call = self._gen_call()
-        return self._call(*args, **kwargs)
+        try:
+            return self._call(*args, **kwargs)
+        except Exception as e:
+            raise Exception(f"{self} failed {e}")
 
     def __repr__(self):
         return f"<{self._client.name}.{self.operation_id}: " \
