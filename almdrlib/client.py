@@ -692,8 +692,8 @@ class Operation(object):
             self._call = self._gen_call()
         try:
             return self._call(*args, **kwargs)
-        except Exception as e:
-            raise Exception(f"{self} failed {e}")
+        except AlmdrlibValueError as e:
+            raise AlmdrlibValueError(f'{self} failed {e}')
 
     def __repr__(self):
         return f"<{self._client.name}.{self.operation_id}: " \
