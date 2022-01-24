@@ -50,7 +50,7 @@ requirements = [
         'configparser>=4.0.2',
         'pyyaml>=5.4.1',
         'jsonschema[format_nongpl]==3.2.0',
-        'm2r==0.2.1',
+        'm2r2==0.3.2',
         'boto3>=1.16.57',
         definitions_dependency
     ]
