@@ -2,7 +2,7 @@ import json
 import logging
 import itertools
 try:
-    from m2r import convert
+    from m2r2 import convert
 except Exception:
     def convert(text):
         return text
