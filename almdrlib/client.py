@@ -13,7 +13,11 @@ import logging
 import json
 import jsonschema
 from jsonschema.validators import validator_for
+from collections import OrderedDict
+from functools import reduce
+
 import alsdkdefs
+from almdrlib.util import *
 
 from almdrlib.exceptions import AlmdrlibValueError
 from almdrlib.config import Config
@@ -274,7 +278,7 @@ class RequestBody(object):
         if not schema:
             return
 
-        datatype = schema.get(OpenAPIKeyWord.TYPE)
+        datatype = schema.get(OpenAPIKeyWord.TYPE, derive_type_from_decomposed_schema(schema))
         name = al_schema.get(OpenAPIKeyWord.NAME, OpenAPIKeyWord.DATA)
         if datatype == OpenAPIKeyWord.OBJECT:
             parameter = RequestBodyObjectParameter(
@@ -946,18 +950,65 @@ class Client(object):
 
 def _normalize_schema(name, schema, required=False):
     properties = schema.get(OpenAPIKeyWord.PROPERTIES)
+    oneof = schema.get(OpenAPIKeyWord.ONE_OF)
+    anyof = schema.get(OpenAPIKeyWord.ANY_OF)
+    allof = schema.get(OpenAPIKeyWord.ALL_OF)
+    compound_schema = oneof or anyof or allof
+
     if properties and bool(properties):
         return schema
 
-    result = {
-        OpenAPIKeyWord.TYPE: OpenAPIKeyWord.OBJECT,
-        OpenAPIKeyWord.PROPERTIES: {
-            name: schema
-        }
-    }
+    if compound_schema:
+        # TODO move to alertlogic-sdk-definitions normalize_node
+        if oneof:
+            xof = OpenAPIKeyWord.ONE_OF
+        elif anyof:
+            xof = OpenAPIKeyWord.ANY_OF
+        elif allof:
+            xof = OpenAPIKeyWord.ALL_OF
 
+        def reduce_props(acc, prop):
+            (k, v) = prop
+            existing_prop = acc.get(k, [])
+            if existing_prop and isinstance(existing_prop, list):
+                existing_prop.append(v)
+                acc[k] = existing_prop
+                return acc
+            elif existing_prop:
+                if existing_prop == v:
+                    return acc
+                acc[k] = [v, existing_prop]
+                return acc
+            else:
+                acc[k] = v
+                return acc
+
+        def add_xof(item):
+            (k, v) = item
+            if isinstance(v, list):
+                return k, OrderedDict({xof: v})
+            else:
+                return item
+
+        allprops = reduce(lambda acc, s: acc + list(s.get(OpenAPIKeyWord.PROPERTIES, OrderedDict()).items()),
+                          compound_schema, [])
+        reduced = reduce(reduce_props, allprops, OrderedDict())
+        compound_props = OrderedDict(map(add_xof, reduced.items()))
+        properties = compound_props
+
+    if not properties:
+        properties = OrderedDict({
+            name: schema
+        })
+
+    result = OrderedDict({
+        OpenAPIKeyWord.TYPE: derive_type_from_decomposed_schema(schema) or OpenAPIKeyWord.OBJECT,
+        OpenAPIKeyWord.PROPERTIES: properties
+    })
+    
     if required:
         result[OpenAPIKeyWord.REQUIRED] = [name]
+
     return result
 
 

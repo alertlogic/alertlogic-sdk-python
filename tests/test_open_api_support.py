@@ -11,7 +11,7 @@ from almdrlib.client import Client
 from almdrlib.client import Config
 from almdrlib.client import Operation
 from alsdkdefs import OpenAPIKeyWord
-
+from collections import OrderedDict
 
 class TestSdk_open_api_support(unittest.TestCase):
     """Tests for `python_boilerplate` package."""
@@ -83,3 +83,14 @@ class TestSdk_open_api_support(unittest.TestCase):
         self.assertIsInstance(Session(), Session)
         self.assertIsInstance(Config(), Config)
         self.assertIsInstance(Client(self._service_name), Client)
+
+    def test_004_test_operations_compound_schema(self):
+        """Test request body properties are properly normalized when schema is compound at the top level"""
+        client = Client(self._service_name)
+        operation = client.operations.get('post_data_compound')
+        self.assertEqual(OrderedDict([('prop',
+                                       OrderedDict([('oneOf', [
+                                           OrderedDict([('type', 'integer')]),
+                                           OrderedDict([('type', 'string')])
+                                       ])]))]),
+                         operation.body._content['application/json']._properties)
