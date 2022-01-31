@@ -84,6 +84,35 @@ paths:
               name: payload
               encoding:
                 explode: true
+
+  /testapi/v1/{account_id}/test_multiple_content_types:
+    post:
+      operationId: test_multiple_content_types
+      requestBody:
+        required: true
+        content:
+          text/csv:
+            schema:
+              type: object
+          application/json:
+            examples:
+            schema:
+              type: object
+      summary: Import protection scope
+      description: |-
+        Endpoint for importing the protection scope of a deployment.
+      parameters:
+        - schema:
+            type: string
+          name: account_id
+          in: path
+          required: true
+          description: AIMS Account ID
+
+      responses:
+        '200':
+          description: OK
+
 components:
   schemas:
     SimpleDataTypesModel:

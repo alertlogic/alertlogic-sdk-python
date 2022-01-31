@@ -21,10 +21,12 @@ for line in sys.stdin:
 endef
 export PRINT_HELP_PYSCRIPT
 
-BROWSER := python -c "$$BROWSER_PYSCRIPT"
+PYTHON := python
+BROWSER := $(PYTHON) -c "$$BROWSER_PYSCRIPT"
+PIP := pip
 
 help:
-	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
+	@$(PYTHON) -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
 clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and Python artifacts
 
@@ -51,7 +53,7 @@ lint: ## check style with flake8
 	flake8 almdrlib tests
 
 test: ## run tests quickly with the default Python
-	python setup.py test
+	$(PYTHON) setup.py test
 	
 test-all: ## run tests on every Python version with tox
 	tox
@@ -78,11 +80,11 @@ release: dist ## package and upload a release
 	twine upload --skip-existing dist/alertlogic-sdk-python-*.* dist/*
 
 dist: clean ## builds source and wheel package
-	python setup.py sdist
+	$(PYTHON) setup.py sdist
 
 install: clean ## install the package to the active Python's site-packages
-	python setup.py install
+	$(PYTHON) setup.py install
 
 uninstall:  ## uninstall the package from the active Python's site-packages
-	pip uninstall alertlogic-sdk-python -y
+	$(PIP) uninstall alertlogic-sdk-python -y
 

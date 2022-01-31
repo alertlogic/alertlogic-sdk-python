@@ -104,8 +104,9 @@ class OperationResponse(object):
 
 
 class RequestBodyParameter(object):
-    def __init__(self, name, schema, required=False, session=None):
+    def __init__(self, name, content_type, schema, required=False, session=None):
         self._name = name
+        self._content_type = content_type
         self._schema = schema
         self._required = required
         self._session = session
@@ -131,6 +132,10 @@ class RequestBodyParameter(object):
         return self._name
 
     @property
+    def content_type(self):
+        return self._content_type
+
+    @property
     def required(self):
         return self._required
 
@@ -142,18 +147,22 @@ class RequestBodyParameter(object):
 
 
 class RequestBodySchemaParameter(RequestBodyParameter):
-    def __init__(self, name, schema, required=False, session=None):
-        super().__init__(name, schema, required, session)
+    def __init__(self, name, content_type, schema, required=False, session=None):
+        super().__init__(name, content_type, schema, required, session)
 
     def serialize(self, kwargs, header=[]):
         data = kwargs.pop(self.name, {})
-        self.validate(data)
-        kwargs['data'] = json.dumps(data)
+        json_content_types = ['application/json', 'alertlogic/json']
+        if self.content_type in json_content_types:    
+            self.validate(data)
+            kwargs['data'] = json.dumps(data)
+        else:
+            kwargs['data'] = data
 
 
 class RequestBodySimpleParameter(RequestBodyParameter):
-    def __init__(self, name, schema, required=False, session=None):
-        super().__init__(name, schema, required, session)
+    def __init__(self, name, content_type, schema, required=False, session=None):
+        super().__init__(name, content_type, schema, required, session)
         self._format = schema.get(OpenAPIKeyWord.FORMAT)
 
     def serialize(self, kwargs, header=None):
@@ -167,12 +176,14 @@ class RequestBodySimpleParameter(RequestBodyParameter):
 class RequestBodyObjectParameter(RequestBodyParameter):
     def __init__(self,
                  name,
+                 content_type,
                  schema,
                  al_schema={},
                  required=False,
                  session=None):
         super().__init__(
                 name,
+                content_type,
                 _normalize_schema(name,
                                   schema,
                                   required),
@@ -268,6 +279,7 @@ class RequestBody(object):
         if datatype == OpenAPIKeyWord.OBJECT:
             parameter = RequestBodyObjectParameter(
                             name=name,
+                            content_type = content_type,
                             schema=schema,
                             al_schema=al_schema,
                             required=self._required,
@@ -276,6 +288,7 @@ class RequestBody(object):
         elif datatype in OpenAPIKeyWord.SIMPLE_DATA_TYPES:
             parameter = RequestBodySimpleParameter(
                             name=name,
+                            content_type = content_type,
                             schema=schema,
                             required=self._required,
                             session=self._session
@@ -283,6 +296,7 @@ class RequestBody(object):
         else:
             parameter = RequestBodySchemaParameter(
                             name=name,
+                            content_type = content_type,
                             schema=schema,
                             required=self._required,
                             session=self._session
@@ -299,7 +313,11 @@ class RequestBody(object):
         #
         # Get content parameters.
         #
-        if OpenAPIKeyWord.CONTENT_TYPE_PARAM in headers:
+        if 'content_type' in kwargs:
+            content_type = kwargs.pop('content_type')
+            payload_body_param = self._content[content_type]
+            headers[OpenAPIKeyWord.CONTENT_TYPE_PARAM] = content_type
+        elif OpenAPIKeyWord.CONTENT_TYPE_PARAM in headers:
             content_type = headers[OpenAPIKeyWord.CONTENT_TYPE_PARAM]
             payload_body_param = self._content[content_type]
         elif self.default_content_type:
@@ -626,16 +644,13 @@ class Operation(object):
             params_schema.update(schema.get(OpenAPIKeyWord.PROPERTIES))
             payload_content = schema.get('x-alertlogic-payload-content')
             if payload_content:
-                params_schema['content_type'].update(
-                        {'x-alertlogic-payload-content': payload_content}
-                )
-
-            # if OpenAPIKeyWord.CONTENT in schema:
-                # result.update(schema)
-            # if 'x-alertlogic-payload' in schema:
-            #     params_schema['content_type'].update(schema)
-            # else:
-            #     params_schema.update(schema.get(OpenAPIKeyWord.PROPERTIES))
+                # require alcli --content_type argument
+                params_schema['content_type'] = {
+                    OpenAPIKeyWord.IN: OpenAPIKeyWord.HEADER,
+                    OpenAPIKeyWord.NAME: 'content_type',
+                    OpenAPIKeyWord.REQUIRED: True,
+                    OpenAPIKeyWord.TYPE: OpenAPIKeyWord.STRING
+                }
 
         result.update({
             OpenAPIKeyWord.PARAMETERS: dict(sorted(params_schema.items()))
