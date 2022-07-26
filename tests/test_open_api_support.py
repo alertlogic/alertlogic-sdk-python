@@ -83,3 +83,14 @@ class TestSdk_open_api_support(unittest.TestCase):
         self.assertIsInstance(Session(), Session)
         self.assertIsInstance(Config(), Config)
         self.assertIsInstance(Client(self._service_name), Client)
+
+    def test_003_json_array_serialization(self):
+        """Checks json array serilisation works for all supported content types"""
+        client = Client(self._service_name)
+        operation = client.operations.get('test_json_array_serialization')
+        payload = [{'allthethings': '42'}]
+        for content_type in ['application/json', 'alertlogic/json', 'alertlogic.com/json']:
+            kwargs = {'payload': payload}
+            headers = {'content-type': content_type}
+            operation.body.serialize(headers, kwargs)
+            self.assertEqual(kwargs['data'], json.dumps(payload))
