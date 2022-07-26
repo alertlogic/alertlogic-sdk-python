@@ -152,7 +152,7 @@ class RequestBodySchemaParameter(RequestBodyParameter):
 
     def serialize(self, kwargs, header=[]):
         data = kwargs.pop(self.name, {})
-        json_content_types = ['application/json', 'alertlogic/json']
+        json_content_types = ['application/json', 'alertlogic/json', 'alertlogic.com/json']
         if self.content_type in json_content_types:    
             self.validate(data)
             kwargs['data'] = json.dumps(data)

@@ -113,6 +113,56 @@ paths:
         '200':
           description: OK
 
+  /testapi/v1/{account_id}/test_json_array_serialization:
+    post:
+      operationId: test_json_array_serialization
+      requestBody:
+        required: true
+        content:
+          alertlogic/json:
+            schema:
+              type: array
+            x-alertlogic-schema:
+              name: payload
+              encoding:
+                explode: true
+          alertlogic.com/json:
+            schema:
+              type: array
+            x-alertlogic-schema:
+              name: payload
+              encoding:
+                explode: true
+          application/json:
+            schema:
+              type: array
+            x-alertlogic-schema:
+              name: payload
+              encoding:
+                explode: true
+      summary: Import protection scope
+      description: |-
+        Endpoint for importing the protection scope of a deployment.
+      parameters:
+        - schema:
+            type: string
+          name: account_id
+          in: path
+          required: true
+          description: AIMS Account ID
+        - schema:
+            type: string
+          enum:
+            - application/json
+            - alertlogic/json
+            - alertlogic.com/json
+          in: header
+          name: content-type
+          required: true
+      responses:
+        '200':
+          description: OK
+
 components:
   schemas:
     SimpleDataTypesModel:
