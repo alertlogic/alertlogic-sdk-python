@@ -202,9 +202,7 @@ class Session():
         """
         requests lib auth module callback
         """
-        if self._token is None:
-            self._authenticate()
-        r.headers["x-aims-auth-token"] = self._token
+        r.headers["x-aims-auth-token"] = self.token
         return r
 
     def client(self, service_name, version=None, *args, **kwargs):
@@ -279,10 +277,6 @@ class Session():
             cookies={},
             **kwargs):
 
-        # Make sure we've authenticated
-        if self._token is None:
-            self._authenticate()
-
         # it's too easy to include the AIMS token when pasting debug logs, so redact it in
         # the logging statement.
         headers.update({'x-aims-auth-token': "REDACTED"})
@@ -294,7 +288,7 @@ class Session():
                      f"Cookies: '{cookies}' " +
                      f"Args: '{kwargs}'")
 
-        headers.update({'x-aims-auth-token': self._token})
+        headers.update({'x-aims-auth-token': self.token})
 
         response = self._session.request(
                 method, url,
@@ -359,6 +353,8 @@ class Session():
 
     @property
     def token(self):
+        if self._token is None:
+            self._authenticate()
         return self._token
 
     @property
