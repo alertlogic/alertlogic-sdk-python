@@ -16,6 +16,7 @@ from almdrlib.config import Config
 from almdrlib.region import Region
 from almdrlib.client import Client
 import alsdkdefs
+from functools import lru_cache
 
 logger = logging.getLogger(__name__)
 
@@ -244,7 +245,19 @@ class Session():
             " class instance")
         return _client
 
+    @lru_cache(maxsize=128)
     def get_url(self, service_name, account_id=None):
+        """
+        Lookup account-specific URL prefix for a service
+
+        The host portion of each service URL can vary, based on the account_id of the
+        request. This function looks up the correct URL, via a static map or (usually)
+        the endpoints service. The result is cached. 
+
+        The URL consists of the protocol and hostname, for example
+        https://api.cloudinsight.alertlogic.com
+        """
+        
         if self._global_endpoint == "map":
             return self.get_mapped_url(service_name, account_id)
         elif re.match(r'^(http|https)://.*$', self._global_endpoint):
