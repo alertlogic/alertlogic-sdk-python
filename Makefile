@@ -53,13 +53,13 @@ lint: ## check style with flake8
 	flake8 almdrlib tests
 
 test: ## run tests quickly with the default Python
-	$(PYTHON) setup.py test
-	
+	pytest
+
 test-all: ## run tests on every Python version with tox
 	tox
 
 coverage: ## check code coverage quickly with the default Python
-	coverage run --source almdrlib setup.py test
+	coverage run --source almdrlib -m pytest
 	coverage report -m
 	coverage html
 	$(BROWSER) htmlcov/index.html
@@ -80,10 +80,10 @@ release: dist ## package and upload a release
 	twine upload --skip-existing dist/alertlogic-sdk-python-*.* dist/*
 
 dist: clean ## builds source and wheel package
-	$(PYTHON) setup.py sdist
+	$(PYTHON) -m build
 
-install: clean ## install the package to the active Python's site-packages
-	$(PYTHON) setup.py install
+install: ## install the package to the active Python's site-packages
+	$(PIP) install pip install dist/alertlogic-sdk-python*.tar.gz
 
 uninstall:  ## uninstall the package from the active Python's site-packages
 	$(PIP) uninstall alertlogic-sdk-python -y
