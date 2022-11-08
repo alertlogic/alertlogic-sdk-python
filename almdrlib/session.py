@@ -77,7 +77,7 @@ class Session():
                 total=5,
                 backoff_factor=1,
                 status_forcelist=[429, 500, 502, 503, 504],
-                method_whitelist=[
+                allowed_methods=[
                     "HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS", "TRACE"]
                 )
         self._session.mount('https://', HTTPAdapter(max_retries=retries))
