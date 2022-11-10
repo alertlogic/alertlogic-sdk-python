@@ -23,7 +23,7 @@ export PRINT_HELP_PYSCRIPT
 
 PYTHON := python
 BROWSER := $(PYTHON) -c "$$BROWSER_PYSCRIPT"
-PIP := pip
+PIP := $(PYTHON) -m pip
 
 help:
 	@$(PYTHON) -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
