@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
+import time
 import almdrlib
-import datetime
+from datetime import datetime
 import logging
 from time import sleep
 
@@ -20,29 +21,46 @@ def iso_to_epoch(t):
     return int(datetime.timestamp(datetime.fromisoformat(t)))
 
 
+def local_tz_offset():
+    '''approximate a GMT offset'''
+    offset = -time.timezone  # -3600 = +01:00
+
+    hours = int(offset / 3600)
+    minutes = int((offset - hours*3600) / 60)
+    return "{:+03d}:{:02d}".format(hours, minutes)
+
+
+def resolve_time(start_ts=None, end_ts=None,
+                 start=None, end=None,
+                 timeframe=None):
+    '''resolve_time
+    returns arguments to be passed to search as a time range. Prefer
+    relative time over ISO time over timestamps'''
+    if timeframe is not None:
+        return {'timeframe': timeframe}
+    elif start is not None and end is not None:
+        return {'start': iso_to_epoch(start),
+                'end': iso_to_epoch(end)}
+    elif start_ts is not None and end_ts is not None:
+        return {'start': start_ts, 'end': end_ts}
+    else:
+        raise Exception('Specify timeframe or stand and end')
+
+
 class Search():
     def __init__(self, session=None):
-        if session:
-            self.search_client = almdrlib.client('search', session=session)
-        else:
-            self.search_client = almdrlib.client('search')
+        self.search_client = almdrlib.client('search', session=session)
+        self.stylist_client = almdrlib.client('search_stylist', session=session)
 
         self.search_id = None
         self.logger = logging.getLogger(__name__)
 
     def submit(self, account_id, query_string,
-               search_type=SEARCH_TYPE, timeframe=None, start=None, end=None):
+               search_type=SEARCH_TYPE, **timekwargs):
         """submit
         Submit the query for execution."""
 
-        if timeframe is not None:
-            time_args = {'timeframe': timeframe}
-        elif start is not None and end is not None:
-            time_args = {'start': iso_to_epoch(args.start),
-                         'end': iso_to_epoch(args.end)}
-            # TODO support non-ISO
-        else:
-            raise Exception('Specify timeframe or stand and end')
+        time_args = resolve_time(**timekwargs)
 
         # POST search/v2/:account_id/searches?search_type=...
         # request body is the query
@@ -56,8 +74,9 @@ class Search():
 
         return self.search_id
 
-    def fetch(self, block=True):
+    def wait_for_complete(self, block=True) -> object:
         # Ask for results for this query, and process a single batch
+        # TODO isolate polling form result fetching
 
         while True:
             # GET search/v2/:account_id/searches/:search_id/status
@@ -86,7 +105,44 @@ class Search():
 
             # failed: syntax errors, runtime problems, etc.
             elif search_status == 'failed':
-                raise Exception(f'Search {search_id} failed: {status}')
+                raise Exception(f'Search {self.search_id} failed: {status}')
+
+            # suspended or completed: some or all results available (respectively)
+            elif search_status in ['complete', 'suspended']:
+                return True
+
+    def fetch(self, block=True) -> object:
+        # Ask for results for this query, and process a single batch
+        # TODO isolate polling form result fetching
+
+        while True:
+            # GET search/v2/:account_id/searches/:search_id/status
+            response = self.search_client.get_search_status(
+                account_id=self.account_id, search_uuid=self.search_id)
+
+            status = response.json()
+            search_status = status['search_status']
+            self.logger.debug(f'Search status for {self.search_id} is {search_status}')
+
+            # pending: no results yet
+            if search_status == 'pending':
+                search_progress = status.get('search_progress')
+                if search_progress is not None:
+                    self.progress = status['progress']
+                    self.records = search_progress['input_scanned_records']
+                    self.bytes = search_progress['input_scanned_bytes']
+                    self.estimated_results = search_progress['estimated_output_records']
+                    self.logger.debug(f'Search progress {self.progress}%: {self.records} '
+                                      f'records, {self.bytes} bytes, {self.estimated_results} output')
+
+                if not block:
+                    return None
+                else:
+                    sleep(1)
+
+            # failed: syntax errors, runtime problems, etc.
+            elif search_status == 'failed':
+                raise Exception(f'Search {self.search_id} failed: {status}')
 
             # suspended or completed: some or all results available (respectively)
             elif search_status in ['complete', 'suspended']:
@@ -110,7 +166,7 @@ class Search():
                     # advance to the next page of results on the next query
                     self.next_token = results['next_token']
                 self.logger.debug(results)
-                return results['results']['records']
+                return results
 
     def results_remaining(self):
         return self.remaining is None or self.remaining > 0
@@ -120,5 +176,15 @@ class Search():
 
         results = []
         while self.results_remaining():
-            results += self.fetch(block=True)
+            raw_results = self.fetch(block=True)
+            results.append(raw_results)
         return results
+
+    def export(self, format, utc_offset=None):
+        self.wait_for_complete(block=True)
+        awful = {"from_epochtime.utc_offset": utc_offset}
+        out = self.stylist_client.export_transformed_search_results(
+            account_id=self.account_id, search_uuid=self.search_id,
+            result_format=format, **awful)
+
+        return out.text
