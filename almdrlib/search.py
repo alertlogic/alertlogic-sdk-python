@@ -55,6 +55,18 @@ class Search():
         self.search_id = None
         self.logger = logging.getLogger(__name__)
 
+    def submit_v1(self, account_id, query, datatype='logmsgs',
+               search_type=SEARCH_TYPE, **timekwargs):
+        """submit
+        Submit V1 query for execution."""
+
+        # XXX fetch_v1 needed, but doesn't really work.
+        response = self.search_client.start_log_search_query_execution(
+            account_id=account_id, query=query, datatype=datatype,
+             **timekwargs)
+        self.load_results(account_id, response.json()['search_uuid'])
+        return self.search_id
+
     def submit(self, account_id, query_string,
                search_type=SEARCH_TYPE, **timekwargs):
         """submit
@@ -66,13 +78,18 @@ class Search():
         # request body is the query
         response = self.search_client.start_query_execution(
             account_id=account_id, query_string=query_string,
-            search_type=SEARCH_TYPE, **time_args)
-        self.search_id = response.json()['search_uuid']
+            search_type=search_type, **time_args)
+        self.load_results(account_id, response.json()['search_uuid'])
+
+        return self.search_id
+
+    def load_results(self, account_id, result_id):
+        """load_results
+        Attempt to load existing search results by ID"""
+        self.search_id = result_id
         self.next_token = None
         self.account_id = account_id
         self.remaining = None
-
-        return self.search_id
 
     def wait_for_complete(self, block=True) -> object:
         # Ask for results for this query, and process a single batch
@@ -111,12 +128,11 @@ class Search():
             elif search_status in ['complete', 'suspended']:
                 return True
 
-    def fetch(self, block=True) -> object:
+    def fetch(self, block=True, rows=ROWS_PER_FETCH) -> dict:
         # Ask for results for this query, and process a single batch
         # TODO isolate polling form result fetching
 
         while True:
-            # GET search/v2/:account_id/searches/:search_id/status
             response = self.search_client.get_search_status(
                 account_id=self.account_id, search_uuid=self.search_id)
 
@@ -151,7 +167,7 @@ class Search():
                     self.logger.debug(f'Fetching initial results for {self.search_id}')
                     response = self.search_client.get_search_results(
                         account_id=self.account_id, search_uuid=self.search_id,
-                        limit=ROWS_PER_FETCH)
+                        limit=rows)
                 else:
                     self.logger.debug(f'Fetching next page of results for {self.search_id} '
                                       f'with token {self.next_token}')
@@ -166,6 +182,50 @@ class Search():
                     # advance to the next page of results on the next query
                     self.next_token = results['next_token']
                 self.logger.debug(results)
+                return results
+
+    def fetch_v1(self, block=True, rows=ROWS_PER_FETCH) -> dict:
+        # XXX can't page through results, probably need to do math vs tokens
+        while True:
+            response = self.search_client.get_log_search_results(
+                account_id=self.account_id, search_uuid=self.search_id)
+
+            status = response.json()
+            search_status = status['search_status']
+            self.logger.debug(f'Search status for {self.search_id} is {search_status}')
+
+            # pending: no results yet
+            if search_status == 'pending':
+                if not block:
+                    return None
+                else:
+                    sleep(1)
+
+            # failed: syntax errors, runtime problems, etc.
+            elif search_status == 'failed':
+                raise Exception(f'Search {self.search_id} failed: {status}')
+
+            # suspended or completed: some or all results available (respectively)
+            elif search_status in ['complete', 'suspended']:
+                # GET search/v2/:account_id/searches/:search_id?limit=...
+                if self.next_token is None:
+                    results = status
+                else:
+                    self.logger.debug(f'Fetching next page of results for {self.search_id} '
+                                      f'with token {self.next_token}')
+                    response = self.search_client.get_log_search_results(
+                        account_id=self.account_id, search_uuid=self.search_id,
+                        starting_token=self.next_token)
+                    results = response.json()
+                self.remaining = results['remaining']
+                self.logger.debug(f'{self.remaining} remaining results for {self.search_id}')
+
+                if self.remaining != 0:
+                    # advance to the next page of results on the next query
+                    self.next_token = results['next_token']
+                elif search_status == 'suspended':
+                    self.remaining = 1
+                # self.logger.debug(results)
                 return results
 
     def results_remaining(self):
