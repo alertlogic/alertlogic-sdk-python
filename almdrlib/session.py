@@ -42,7 +42,7 @@ class Session():
     def __init__(
             self, access_key_id=None, secret_key=None, aims_token=None,
             account_id=None, profile=None, global_endpoint=None,
-            residency="default", raise_for_status=True):
+            residency="default", raise_for_status=True, timeout=300):
         """
         :param region: a Region object
         :param access_key_id: your Alert Logic ActiveWatchaccess_key_id
@@ -67,10 +67,12 @@ class Session():
                           are the only valid entries
         :param raise_for_status: Raise an exception for failed http requests
                                  instead of returning response object
+        :param timeout: timeout on HTTP requests. None to disable/wait forever
         """
 
         # Setup session object
         self._session = requests.Session()
+        self.timeout = timeout
         retries = Retry(
                 total=5,
                 backoff_factor=1,
@@ -252,12 +254,12 @@ class Session():
 
         The host portion of each service URL can vary, based on the account_id of the
         request. This function looks up the correct URL, via a static map or (usually)
-        the endpoints service. The result is cached. 
+        the endpoints service. The result is cached.
 
         The URL consists of the protocol and hostname, for example
         https://api.cloudinsight.alertlogic.com
         """
-        
+
         if self._global_endpoint == "map":
             return self.get_mapped_url(service_name, account_id)
         elif re.match(r'^(http|https)://.*$', self._global_endpoint):
@@ -308,6 +310,7 @@ class Session():
                 params=params,
                 headers=headers,
                 cookies=cookies,
+                timeout=self.timeout,
                 **kwargs)
         if self._raise_for_status:
             response.raise_for_status()
