@@ -116,8 +116,12 @@ class Config():
             if self._access_key_id is None or self._secret_key is None:
                 service_name_key = f"{service_name}.aims_authc",
                 env = AlEnv(service_name_key)
-                self._access_key_id = env.get('access_key_id')
-                self._secret_key = env.get('secret_access_key')
+                # attempt SSM first, then dynamoDB
+                self._access_key_id = env.get_parameter('access_key_id', decrypt=True)
+                self._secret_key = env.get_parameter('secret_access_key', decrypt=True)
+                if self._access_key_id is None or self._secret_key is None:
+                    self._access_key_id = env.get('access_key_id')
+                    self._secret_key = env.get('secret_access_key')
         except Exception as e:
             logger.debug(f"Did not initialise aims credentials for {service_name} because {e}")
 

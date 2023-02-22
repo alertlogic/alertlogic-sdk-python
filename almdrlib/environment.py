@@ -59,6 +59,7 @@ class AlEnv:
             self.dynamodb = boto3.resource('dynamodb')
             self.table = self.dynamodb.Table(self.table_name)
             self._table_date_time = self.table.creation_date_time
+            self.ssm = boto3.client('ssm')
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Code'] == 'ResourceNotFoundException':
                 raise AlEnvConfigurationTableUnavailableException(self.table_name)
@@ -74,6 +75,16 @@ class AlEnv:
             return converted
         else:
             return default
+
+    def get_parameter(self, key, default=None, decrypt=False):
+        try:
+            parameter = self.ssm.get_parameter(Name=self._make_ssm_key(key), WithDecryption=decrypt)
+        except self.ssm.exceptions.ParameterNotFound:
+            return default
+        return parameter["Parameter"]["Value"]
+
+    def _make_ssm_key(self, option_key):
+        return f"/deployments/{self._get_region()}/env-settings/{self._make_ddb_key(option_key)}"
 
     def _make_ddb_key(self, option_key):
         return f"{self.application_name}.{option_key}"
