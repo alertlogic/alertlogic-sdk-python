@@ -1,5 +1,5 @@
 '''Cloud stored environment configuration
-AlEnv class implements retrieval and formatting of configuration parameters from dynamodb in the standardized way.
+AlEnv class implements retrieval and formatting of configuration parameters from SSM parameter store & dynamodb in the standardized way.
 AWS client used is configured as follows https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html
 Therefore, AWS cli configuration would be automatically picked up.
 The simpliest way is to use environment variables.
@@ -29,6 +29,12 @@ Usage:
 # Assuming parameter is stored in ddb as '"true"'
 >> env.get("my_parameter", type='boolean')
 True
+# For String types in SSM:
+>> env.get_parameter("my_parameter")
+'value'
+# For SecureString types in SSM:
+>> env.get_parameter("my_parameter", decrypt=True)
+'value'
 '''
 
 import json
