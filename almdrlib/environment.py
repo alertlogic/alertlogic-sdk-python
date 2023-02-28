@@ -75,7 +75,7 @@ class AlEnv:
             self.dynamodb = boto3.resource('dynamodb')
             self.ssm = boto3.client('ssm')
         except (botocore.exceptions.NoRegionError, botocore.exceptions.NoCredentialsError) as e:
-            raise AlEnvAwsConfigurationException(f'Please validate your AWS configuration: {e}')
+            raise AlEnvAwsConfigurationException(f'Please validate your AWS configuration') from e
         if "dynamodb" in source:
             try:
                 self.table = self.dynamodb.Table(self.table_name)
@@ -84,7 +84,7 @@ class AlEnv:
                 if e.response['Error']['Code'] == 'ResourceNotFoundException':
                     raise AlEnvConfigurationTableUnavailableException(self.table_name)
                 else:
-                    raise AlEnvException(e)
+                    raise AlEnvException() from e
 
     def get(self, key, default=None, format='decoded', type=None):
         if "dynamodb" not in self.source:
@@ -104,7 +104,7 @@ class AlEnv:
         except self.ssm.exceptions.ParameterNotFound:
             return default
         except botocore.exceptions.ClientError as e:
-            raise AlEnvException(e)
+            raise AlEnvException() from e
         return parameter["Parameter"]["Value"]
 
     def _make_ssm_key(self, option_key):
