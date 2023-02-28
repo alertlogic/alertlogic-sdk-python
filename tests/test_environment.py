@@ -95,6 +95,10 @@ class TestAlEnv(unittest.TestCase):
         env = AlEnv("otherapplication", "authc", source="ssm")
         assert env.get_parameter("stringparam") == 'testingtesting'
 
+        env = AlEnv("someapplication", source=("ssm", "dynamodb"))
+        assert env.get("strkey") == 'strvalue'
+        assert env.get_parameter("stringparam") == 'testingtesting'
+
 
 if __name__ == '__main__':
     unittest.main()

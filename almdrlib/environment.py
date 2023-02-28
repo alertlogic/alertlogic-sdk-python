@@ -60,10 +60,10 @@ class AlmdrlibSourceNotEnabledError(AlEnvException):
 
 
 class AlEnv:
-    def __init__(self, application_name, client=None, source="dynamodb"):
+    def __init__(self, application_name, client=None, source=("dynamodb",)):
         self.application_name = application_name
         self.client = client
-        self.source = source
+        self.source = source if type(source) in [tuple, list] else (source,)
         self.region = AlEnv._get_region()
         self.stack_name = AlEnv._get_stack_name()
         self.table_name = AlEnv._table_name(self.region, self.stack_name)
@@ -72,7 +72,7 @@ class AlEnv:
             self.ssm = boto3.client('ssm')
         except (botocore.exceptions.NoRegionError, botocore.exceptions.NoCredentialsError) as e:
             raise AlEnvAwsConfigurationException(f'Please validate your AWS configuration: {e}')
-        if source == "dynamodb":
+        if "dynamodb" in source:
             try:
                 self.table = self.dynamodb.Table(self.table_name)
                 self._table_date_time = self.table.creation_date_time
@@ -83,7 +83,7 @@ class AlEnv:
                     raise AlEnvException(e)
 
     def get(self, key, default=None, format='decoded', type=None):
-        if self.source != "dynamodb":
+        if "dynamodb" not in self.source:
             raise AlmdrlibSourceNotEnabledError("dynamodb is not enabled for this environment")
         fetched_value = self.table.get_item(Key={"key": self._make_ddb_key(key)}).get('Item', {}).get('value')
         converted = AlEnv._convert(fetched_value, format, type)
@@ -93,7 +93,7 @@ class AlEnv:
             return default
 
     def get_parameter(self, key, default=None, decrypt=False):
-        if self.source != "ssm":
+        if "ssm" not in self.source:
             raise AlmdrlibSourceNotEnabledError("ssm is not enabled for this environment")
         try:
             parameter = self.ssm.get_parameter(Name=self._make_ssm_key(key), WithDecryption=decrypt)
