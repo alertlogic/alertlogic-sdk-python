@@ -15,6 +15,8 @@ Network or io errors are not handled.
 Usage:
 # export ALERTLOGIC_STACK_REGION=us-east-1
 # export ALERTLOGIC_STACK_NAME=integration
+
+Dynamodb usage:
 >> env = AlEnv("myapplication")
 # Assuming parameter is stored in ddb as '"value"'
 >> env.get("my_parameter")
@@ -29,6 +31,8 @@ Usage:
 # Assuming parameter is stored in ddb as '"true"'
 >> env.get("my_parameter", type='boolean')
 True
+
+SSM usage:
 >> env = AlEnv("myapplication", source="ssm")
 # For String types in SSM:
 >> env.get_parameter("my_parameter")
