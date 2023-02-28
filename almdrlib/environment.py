@@ -83,7 +83,7 @@ class AlEnv:
                     raise AlEnvException(e)
 
     def get(self, key, default=None, format='decoded', type=None):
-        if self.source == "dynamodb":
+        if self.source != "dynamodb":
             raise AlmdrlibSourceNotEnabledError("dynamodb is not enabled for this environment")
         fetched_value = self.table.get_item(Key={"key": self._make_ddb_key(key)}).get('Item', {}).get('value')
         converted = AlEnv._convert(fetched_value, format, type)
@@ -93,7 +93,7 @@ class AlEnv:
             return default
 
     def get_parameter(self, key, default=None, decrypt=False):
-        if self.source == "ssm":
+        if self.source != "ssm":
             raise AlmdrlibSourceNotEnabledError("ssm is not enabled for this environment")
         try:
             parameter = self.ssm.get_parameter(Name=self._make_ssm_key(key), WithDecryption=decrypt)
@@ -104,10 +104,10 @@ class AlEnv:
         return parameter["Parameter"]["Value"]
 
     def _make_ssm_key(self, option_key):
-        return f"/deployments/{self.stack_name}/{self._get_region()}/env-settings/{self.application_name}/{self._make_client_option_key()}"
+        return f"/deployments/{self.stack_name}/{self._get_region()}/env-settings/{self.application_name}/{self._make_client_option_key(option_key)}"
 
     def _make_ddb_key(self, option_key):
-        return f"{self.application_name}.{self._make_client_option_key()}"
+        return f"{self.application_name}.{self._make_client_option_key(option_key)}"
 
     def _make_client_option_key(self, option_key):
         if self.client is None:

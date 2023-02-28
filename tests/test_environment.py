@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import MagicMock
-from almdrlib.environment import AlEnv
+from almdrlib.environment import AlEnv, AlmdrlibSourceNotEnabledError
 import os
 import boto3
 
@@ -22,6 +22,8 @@ class MockDDBTable:
             return {"Item": {"key": Key, "value": "\"true\""}}
         elif Key == 'someapplication.boolkeyfalse':
             return {"Item": {"key": Key, "value": "\"false\""}}
+        elif Key == 'otherapplication.authc.strkey':
+            return {"Item": {"key": Key, "value": "\"strvalue\""}} 
 
 
 class MockBotoDDB:
@@ -47,13 +49,15 @@ class MockBotoSSM:
         Name = kwargs.get('Name')
         WithDecryption = kwargs.get('WithDecryption')
 
-        if Name == '/deployments/us-west-1/env-settings/someapplication.stringparam':
+        if Name == '/deployments/production/us-west-1/env-settings/someapplication/stringparam':
             return {'Parameter': {'Value': 'testingtesting'}}
-        elif Name == '/deployments/us-west-1/env-settings/someapplication.securestringparam':
+        elif Name == '/deployments/production/us-west-1/env-settings/someapplication/securestringparam':
             if WithDecryption:
                 return {'Parameter': {'Value': 'testingtestingtesting'}}
             else:
                 return {'Parameter': {'Value': 'AQICAHhxjBnL9Dhpl/8CUT7/NC07HUYnX+P'}}
+        elif Name == '/deployments/production/us-west-1/env-settings/otherapplication/authc.stringparam':
+            return {'Parameter': {'Value': 'testingtesting'}}
         else:
             raise MockBotoSSM.exceptions.ParameterNotFound()
 
@@ -64,7 +68,7 @@ class TestAlEnv(unittest.TestCase):
         boto3.client = MagicMock(return_value=MockBotoSSM)
         os.environ['ALERTLOGIC_STACK_REGION'] = 'us-west-1'
         os.environ['ALERTLOGIC_STACK_NAME'] = 'production'
-        env = AlEnv("someapplication")
+        env = AlEnv("someapplication", source="dynamodb")
         assert env.table_name == 'us-west-1.production.dev.global.settings'
         assert env.get("strkey") == 'strvalue'
         assert env.get("strkey", format='raw') == '"strvalue"'
@@ -75,11 +79,22 @@ class TestAlEnv(unittest.TestCase):
         assert env.get("boolkeytrue", type='boolean') is True
         assert env.get("floatkey") == '1.0'
         assert env.get("floatkey", type='float') == 1.0
+        with self.assertRaises(AlmdrlibSourceNotEnabledError):
+            assert env.get_parameter("testparam")    
+        env = AlEnv("otherapplication", "authc", source="dynamodb")
+        assert env.get("strkey") == 'strvalue'
+
+        env = AlEnv("someapplication", source="ssm")
         assert env.get_parameter("stringparam") == 'testingtesting'
         assert env.get_parameter("securestringparam") == 'AQICAHhxjBnL9Dhpl/8CUT7/NC07HUYnX+P'
         assert env.get_parameter("securestringparam", decrypt=False) == 'AQICAHhxjBnL9Dhpl/8CUT7/NC07HUYnX+P'
         assert env.get_parameter("securestringparam", decrypt=True) == 'testingtestingtesting'
         assert env.get_parameter("invalidparam", "default") == 'default'
+        with self.assertRaises(AlmdrlibSourceNotEnabledError):
+            assert env.get("testparam")    
+        env = AlEnv("otherapplication", "authc", source="ssm")
+        assert env.get_parameter("stringparam") == 'testingtesting'
+
 
 if __name__ == '__main__':
     unittest.main()
