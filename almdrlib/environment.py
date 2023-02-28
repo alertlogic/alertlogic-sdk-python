@@ -54,27 +54,36 @@ class AlEnvAwsConfigurationException(AlEnvException):
 class AlEnvConfigurationTableUnavailableException(AlEnvException):
     pass
 
+class AlmdrlibSourceNotEnabledError(AlEnvException):
+    pass
+
 
 class AlEnv:
-    def __init__(self, application_name):
+    def __init__(self, application_name, client=None, sources=("dynamodb")):
         self.application_name = application_name
+        self.client = client
+        self.sources = sources
         self.region = AlEnv._get_region()
         self.stack_name = AlEnv._get_stack_name()
         self.table_name = AlEnv._table_name(self.region, self.stack_name)
         try:
             self.dynamodb = boto3.resource('dynamodb')
-            self.table = self.dynamodb.Table(self.table_name)
-            self._table_date_time = self.table.creation_date_time
             self.ssm = boto3.client('ssm')
-        except botocore.exceptions.ClientError as e:
-            if e.response['Error']['Code'] == 'ResourceNotFoundException':
-                raise AlEnvConfigurationTableUnavailableException(self.table_name)
-            else:
-                raise AlEnvException(e)
         except (botocore.exceptions.NoRegionError, botocore.exceptions.NoCredentialsError) as e:
             raise AlEnvAwsConfigurationException(f'Please validate your AWS configuration: {e}')
+        if "dynamodb" in sources:
+            try:
+                self.table = self.dynamodb.Table(self.table_name)
+                self._table_date_time = self.table.creation_date_time
+            except botocore.exceptions.ClientError as e:
+                if e.response['Error']['Code'] == 'ResourceNotFoundException':
+                    raise AlEnvConfigurationTableUnavailableException(self.table_name)
+                else:
+                    raise AlEnvException(e)
 
     def get(self, key, default=None, format='decoded', type=None):
+        if "dynamodb" not in self.sources:
+            raise AlmdrlibSourceNotEnabledError("dynamodb is not enabled for this environment")
         fetched_value = self.table.get_item(Key={"key": self._make_ddb_key(key)}).get('Item', {}).get('value')
         converted = AlEnv._convert(fetched_value, format, type)
         if converted is not None:
@@ -83,18 +92,28 @@ class AlEnv:
             return default
 
     def get_parameter(self, key, default=None, decrypt=False):
+        if "ssm" not in self.sources:
+            raise AlmdrlibSourceNotEnabledError("ssm is not enabled for this environment")
         try:
             parameter = self.ssm.get_parameter(Name=self._make_ssm_key(key), WithDecryption=decrypt)
         except self.ssm.exceptions.ParameterNotFound:
             return default
+        except botocore.exceptions.ClientError as e:
+            raise AlEnvException(e)
         return parameter["Parameter"]["Value"]
 
     def _make_ssm_key(self, option_key):
-        return f"/deployments/{self._get_region()}/env-settings/{self._make_ddb_key(option_key)}"
+        return f"/deployments/{self.stack_name}/{self._get_region()}/env-settings/{self.application_name}/{self._make_client_option_key()}"
 
     def _make_ddb_key(self, option_key):
-        return f"{self.application_name}.{option_key}"
+        return f"{self.application_name}.{self._make_client_option_key()}"
 
+    def _make_client_option_key(self, option_key):
+        if self.client is None:
+            return option_key
+        else:
+            return f"{self.client}.{option_key}"
+        
     @staticmethod
     def _convert(value, format, type):
         if format == 'raw' and value:
