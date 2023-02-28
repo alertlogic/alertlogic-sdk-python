@@ -115,7 +115,7 @@ class Config():
         if self._access_key_id is None or self._secret_key is None:
             try:
                 # attempt ssm first
-                env = AlEnv(service_name, "aims_authc", ("ssm"))
+                env = AlEnv(service_name, "aims_authc", "ssm")
                 self._access_key_id = env.get_parameter('access_key_id', decrypt=True)
                 self._secret_key = env.get_parameter('secret_access_key', decrypt=True)
             except Exception as e:
@@ -123,7 +123,7 @@ class Config():
         if self._access_key_id is None or self._secret_key is None:
             try:
                 # if that doesn't work, attempt dynamodb
-                env = AlEnv(service_name, "aims_authc", ("dynamodb"))
+                env = AlEnv(service_name, "aims_authc", "dynamodb")
                 self._access_key_id = env.get('access_key_id')
                 self._secret_key = env.get('secret_access_key')
             except Exception as e:

@@ -29,6 +29,7 @@ Usage:
 # Assuming parameter is stored in ddb as '"true"'
 >> env.get("my_parameter", type='boolean')
 True
+>> env = AlEnv("myapplication", source="ssm")
 # For String types in SSM:
 >> env.get_parameter("my_parameter")
 'value'
@@ -59,10 +60,10 @@ class AlmdrlibSourceNotEnabledError(AlEnvException):
 
 
 class AlEnv:
-    def __init__(self, application_name, client=None, sources=("dynamodb")):
+    def __init__(self, application_name, client=None, source="dynamodb"):
         self.application_name = application_name
         self.client = client
-        self.sources = sources
+        self.source = source
         self.region = AlEnv._get_region()
         self.stack_name = AlEnv._get_stack_name()
         self.table_name = AlEnv._table_name(self.region, self.stack_name)
@@ -71,7 +72,7 @@ class AlEnv:
             self.ssm = boto3.client('ssm')
         except (botocore.exceptions.NoRegionError, botocore.exceptions.NoCredentialsError) as e:
             raise AlEnvAwsConfigurationException(f'Please validate your AWS configuration: {e}')
-        if "dynamodb" in sources:
+        if source == "dynamodb":
             try:
                 self.table = self.dynamodb.Table(self.table_name)
                 self._table_date_time = self.table.creation_date_time
@@ -82,7 +83,7 @@ class AlEnv:
                     raise AlEnvException(e)
 
     def get(self, key, default=None, format='decoded', type=None):
-        if "dynamodb" not in self.sources:
+        if self.source == "dynamodb":
             raise AlmdrlibSourceNotEnabledError("dynamodb is not enabled for this environment")
         fetched_value = self.table.get_item(Key={"key": self._make_ddb_key(key)}).get('Item', {}).get('value')
         converted = AlEnv._convert(fetched_value, format, type)
@@ -92,7 +93,7 @@ class AlEnv:
             return default
 
     def get_parameter(self, key, default=None, decrypt=False):
-        if "ssm" not in self.sources:
+        if self.source == "ssm":
             raise AlmdrlibSourceNotEnabledError("ssm is not enabled for this environment")
         try:
             parameter = self.ssm.get_parameter(Name=self._make_ssm_key(key), WithDecryption=decrypt)
