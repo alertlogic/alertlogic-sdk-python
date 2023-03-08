@@ -104,30 +104,30 @@ class Config():
         else:
             self._initialize_defaults()
 
-        self._init_al_env_credentials(service_name)
+        self._init_al_env_credentials()
 
         logger.debug("Finished configuraiton initialization. " +
                      f"access_key_id={self._access_key_id}, " +
                      f"account_id={self._account_id}, " +
                      f"global_endpoint={self._global_endpoint}")
 
-    def _init_al_env_credentials(self, service_name):
+    def _init_al_env_credentials(self):
         if self._access_key_id is None or self._secret_key is None:
             try:
                 # attempt ssm first
-                env = AlEnv(service_name, "aims_authc", "ssm")
+                env = AlEnv(self._service_name, "aims_authc", "ssm")
                 self._access_key_id = env.get_parameter('access_key_id', decrypt=True)
                 self._secret_key = env.get_parameter('secret_access_key', decrypt=True)
             except Exception as e:
-                logger.debug(f"Did not initialise aims credentials via SSM for {service_name} because {e}")
+                logger.debug(f"Did not initialise aims credentials via SSM for {self._service_name} because {e}")
         if self._access_key_id is None or self._secret_key is None:
             try:
                 # if that doesn't work, attempt dynamodb
-                env = AlEnv(service_name, "aims_authc", "dynamodb")
+                env = AlEnv(self._service_name, "aims_authc", "dynamodb")
                 self._access_key_id = env.get('access_key_id')
                 self._secret_key = env.get('secret_access_key')
             except Exception as e:
-                logger.debug(f"Did not initialise aims credentials via dynamodb for {service_name} because {e}")
+                logger.debug(f"Did not initialise aims credentials via dynamodb for {self._service_name} because {e}")
            
 
     def _read_config_file(self):
