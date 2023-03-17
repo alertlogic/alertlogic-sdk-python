@@ -8,7 +8,7 @@ import boto3
 class MockDDBTable:
     creation_date_time = '2005-08-09T18:31:42-03:30'
     def __init__(self, tablename):
-        pass
+        self.tablename = tablename
 
     def get_item(self, **kwargs):
         Key = kwargs.get('Key')['key']
@@ -61,7 +61,6 @@ class MockBotoSSM:
         else:
             raise MockBotoSSM.exceptions.ParameterNotFound()
 
-
 class TestAlEnv(unittest.TestCase):
     def test_something(self):
         boto3.resource = MagicMock(return_value=MockBotoDDB)
@@ -69,7 +68,7 @@ class TestAlEnv(unittest.TestCase):
         os.environ['ALERTLOGIC_STACK_REGION'] = 'us-west-1'
         os.environ['ALERTLOGIC_STACK_NAME'] = 'production'
         env = AlEnv("someapplication", source="dynamodb")
-        assert env.table_name == 'us-west-1.production.dev.global.settings'
+        assert AlEnv.table.tablename == 'us-west-1.production.dev.global.settings'
         assert env.get("strkey") == 'strvalue'
         assert env.get("strkey", format='raw') == '"strvalue"'
         assert env.get("intkey") == '1'
