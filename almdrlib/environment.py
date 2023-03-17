@@ -47,15 +47,17 @@ import boto3
 import os
 import botocore
 import cachetools
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class AlEnvException(Exception):
     pass
 
-
 class AlEnvAwsConfigurationException(AlEnvException):
     pass
-
 
 class AlEnvConfigurationTableUnavailableException(AlEnvException):
     pass
@@ -69,6 +71,7 @@ class AlEnv:
     dynamodb = None
     ssm = None
     table = None
+    table_name = None
 
     def __init__(self, application_name, client=None, source=("dynamodb",)):
         self.application_name = application_name
@@ -108,6 +111,7 @@ class AlEnv:
     @cachetools.cached(cache=cachetools.TTLCache(maxsize=16, ttl=3600))
     def _get_cached_ssm_parameter(ssm_key, default=None, decrypt=False):
         try:
+            logger.debug(f"Query SSM for parameter {ssm_key}")
             parameter = AlEnv.ssm.get_parameter(Name=ssm_key, WithDecryption=decrypt)
         except AlEnv.ssm.exceptions.ParameterNotFound:
             return default
@@ -118,6 +122,7 @@ class AlEnv:
     @staticmethod
     @cachetools.cached(cache=cachetools.TTLCache(maxsize=16, ttl=3600))
     def _get_cached_dynamodb_item(key):
+        logger.debug(f"Query DynamoDB table {AlEnv.table_name} for item {key}")
         return AlEnv.table.get_item(Key={"key": key}).get('Item', {}).get('value')
         
     @staticmethod
@@ -136,12 +141,12 @@ class AlEnv:
     def _setup_dynamodb_table():        
         region = AlEnv._get_region()
         stack_name = AlEnv._get_stack_name()
-        table_name = AlEnv._table_name(region, stack_name)
+        AlEnv.table_name = AlEnv._table_name(region, stack_name)
         try:
-            AlEnv.table = AlEnv.dynamodb.Table(table_name)
+            AlEnv.table = AlEnv.dynamodb.Table(AlEnv.table_name)
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Code'] == 'ResourceNotFoundException':
-                raise AlEnvConfigurationTableUnavailableException(table_name)
+                raise AlEnvConfigurationTableUnavailableException(AlEnv.table_name)
             else:
                 raise AlEnvException() from e
 
