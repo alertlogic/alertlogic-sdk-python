@@ -6,3 +6,6 @@ pyyaml==5.4.1
 jsonschema[format_nongpl]==3.2.0
 m2r2==0.3.2
 boto3>=1.16.57
+markupsafe==2.0.1
+sphinxcontrib-contentui
+sphinx_paramlinks
