@@ -12,7 +12,7 @@ BUILDDIR      = _build
 
 APISDIR       = $(shell printf "import alsdkdefs\nprint(alsdkdefs.get_apis_dir())" | python)
 APIDOCSDIR	  = ./$(BUILDDIR)/api_html
-APISPECFILES  := $(shell find $(APISDIR) -name '*.yaml')
+APISPECFILES  := $(shell find $(APISDIR) -regex ".*.v[0-9]*.yaml")
 APIDOCFILES   := $(subst $(APISDIR),$(APIDOCSDIR),$(APISPECFILES:%.yaml=%.html))
 
 VPATH 		  = $(APISDIR)
