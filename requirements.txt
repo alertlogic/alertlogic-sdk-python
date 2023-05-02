@@ -7,3 +7,6 @@ jsonschema[format_nongpl]==3.2.0
 m2r2==0.3.2
 boto3>=1.16.57
 cachetools>=5.3.0
+markupsafe==2.0.1
+sphinxcontrib-contentui
+sphinx_paramlinks
