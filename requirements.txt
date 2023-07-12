@@ -9,3 +9,7 @@ boto3>=1.16.57
 markupsafe==2.0.1
 sphinxcontrib-contentui
 sphinx_paramlinks
+
+# Pin to maintain 3.7 support
+zipp==3.15.0
+importlib_metadata==6.7.0
