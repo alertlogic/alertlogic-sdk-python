@@ -1,5 +1,6 @@
 [build-system]
-requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=3.4", "requests"]
+requires = ["setuptools>=84.2.1", "wheel>=0.48.0", "setuptools_scm[toml]>=10.3.4", "requests"]
+build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
-write_to = "almdrlib/version.py"
+version_file = "almdrlib/version.py"

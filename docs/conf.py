@@ -19,9 +19,9 @@
 #
 import os
 import logging
+from importlib.metadata import version as package_version
 import almdrlib
 from almdrlib.docs import make_documentation
-from pkg_resources import get_distribution
 
 almdrlib.set_logger('almdrlib', logging.INFO)
 make_documentation(os.path.dirname(os.path.abspath(__file__)))
@@ -66,7 +66,7 @@ author = "Alert Logic, Inc."
 # the built documents.
 #
 # The full version, including alpha/beta/rc tags.
-release = get_distribution('alertlogic-sdk-python').version
+release = package_version('alertlogic-sdk-python')
 version = '.'.join(release.split('.')[:3])
 
 
