@@ -46,12 +46,12 @@ except:
     definitions_dependency = 'alertlogic-sdk-definitions>=v0.0.74'
 
 requirements = [
-        'requests>=2.18',
-        'configparser>=4.0.2',
-        'pyyaml>=5.4.1',
+        'requests>=2.34.2',
+        'urllib3>=2.8.0',
+        'pyyaml>=6.0.3',
         'jsonschema[format_nongpl]==3.2.0',
-        'm2r2==0.3.2',
-        'boto3>=1.16.57',
+        'm2r2>=2.1.0',
+        'boto3>=1.43.118',
         definitions_dependency
     ]
 
@@ -65,7 +65,7 @@ setup(
     license='MIT license',
     author='Alert Logic Inc.',
     author_email='devsupport@alertlogic.com',
-    python_requires='>=3.6',
+    python_requires='>=3.11',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
@@ -74,9 +74,11 @@ setup(
         'Operating System :: MacOS :: MacOS X',
         'Operating System :: Microsoft :: Windows',
         'Operating System :: POSIX',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8'
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
+        'Programming Language :: Python :: 3.14',
+        'Programming Language :: Python :: 3.15'
     ],
     description='Alert Logic Software Development Kit for Python.',
     long_description=readme + '\n\n' + history,
@@ -91,10 +93,10 @@ setup(
     install_requires=requirements,
     extras_require={
         'dev': [
-            'pytest>=3',
-            'mock>=2.0.0',
-            'httpretty>=0.8.14',
-            'pycodestyle>=2.3.1',
+            'pytest>=9.1.1',
+            'mock>=5.2.0',
+            'httpretty>=1.1.4',
+            'pycodestyle>=2.15.0',
             'jsonschema[format_nongpl]==3.2.0'
         ],
     },
